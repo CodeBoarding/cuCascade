@@ -93,7 +93,7 @@ inline cudf::type_id as_cudf_type_id(int32_t type_id)
 // scratch allocator races with the cucascade resource ref under multi-GPU and
 // produces uninitialized dst_buf_info reads inside compute_splits).
 std::unique_ptr<idata_representation> convert_gpu_to_gpu(
-  idata_representation& source,
+  const idata_representation& source,
   const memory::memory_space* target_memory_space,
   ::cuda::stream_ref stream,
   [[maybe_unused]] memory::reservation* reservation);
@@ -102,7 +102,7 @@ std::unique_ptr<idata_representation> convert_gpu_to_gpu(
  * @brief Convert gpu_table_representation to host_data_packed_representation
  */
 std::unique_ptr<idata_representation> convert_gpu_to_host(
-  idata_representation& source,
+  const idata_representation& source,
   const memory::memory_space* target_memory_space,
   ::cuda::stream_ref stream,
   memory::reservation* reservation)
@@ -151,7 +151,7 @@ std::unique_ptr<idata_representation> convert_gpu_to_host(
  * @brief Convert host_data_packed_representation to gpu_table_representation
  */
 std::unique_ptr<idata_representation> convert_host_to_gpu(
-  idata_representation& source,
+  const idata_representation& source,
   const memory::memory_space* target_memory_space,
   ::cuda::stream_ref stream,
   [[maybe_unused]] memory::reservation* reservation)
@@ -204,7 +204,7 @@ std::unique_ptr<idata_representation> convert_host_to_gpu(
  * copy)
  */
 std::unique_ptr<idata_representation> convert_host_to_host(
-  idata_representation& source,
+  const idata_representation& source,
   const memory::memory_space* target_memory_space,
   ::cuda::stream_ref /*stream*/,
   memory::reservation* reservation)
@@ -496,7 +496,7 @@ static void collect_column_d2h_ops(
  * intermediate GPU-side contiguous buffer that cudf::pack allocates.
  */
 std::unique_ptr<idata_representation> convert_gpu_to_host_fast(
-  idata_representation& source,
+  const idata_representation& source,
   const memory::memory_space* target_memory_space,
   ::cuda::stream_ref stream,
   memory::reservation* reservation)
@@ -891,7 +891,7 @@ static std::unique_ptr<cudf::column> reconstruct_column_p2p(const cudf::column_v
  * allocate target-side buffers, and peer-copy each leaf buffer directly.
  */
 std::unique_ptr<idata_representation> convert_gpu_to_gpu(
-  idata_representation& source,
+  const idata_representation& source,
   const memory::memory_space* target_memory_space,
   ::cuda::stream_ref stream,
   [[maybe_unused]] memory::reservation* reservation)
@@ -1184,7 +1184,7 @@ static std::unique_ptr<cudf::column> reconstruct_column(
  * buffers from pinned host blocks directly to device allocations.
  */
 std::unique_ptr<idata_representation> convert_host_fast_to_gpu(
-  idata_representation& source,
+  const idata_representation& source,
   const memory::memory_space* target_memory_space,
   ::cuda::stream_ref stream,
   [[maybe_unused]] memory::reservation* reservation)
@@ -1251,7 +1251,7 @@ std::unique_ptr<idata_representation> convert_host_fast_to_gpu(
  * @brief Convert host_data_representation to host_data_representation (cross-host copy)
  */
 std::unique_ptr<idata_representation> convert_host_fast_to_host_fast(
-  idata_representation& source,
+  const idata_representation& source,
   const memory::memory_space* target_memory_space,
   ::cuda::stream_ref /*stream*/,
   memory::reservation* reservation)
@@ -1528,7 +1528,7 @@ static void read_column_buffers(
  * An RAII file guard ensures partial files are cleaned up on exception.
  */
 static std::unique_ptr<idata_representation> convert_host_data_to_disk(
-  idata_representation& source,
+  const idata_representation& source,
   const memory::memory_space* target_memory_space,
   [[maybe_unused]] ::cuda::stream_ref stream,
   [[maybe_unused]] memory::reservation* reservation)
@@ -1575,7 +1575,7 @@ static std::unique_ptr<idata_representation> convert_host_data_to_disk(
  * allocates host blocks, and reads data buffers from the disk file.
  */
 static std::unique_ptr<idata_representation> convert_disk_to_host_data(
-  idata_representation& source,
+  const idata_representation& source,
   const memory::memory_space* target_memory_space,
   [[maybe_unused]] ::cuda::stream_ref stream,
   memory::reservation* reservation)
@@ -1650,7 +1650,7 @@ static void collect_gpu_column_io_entries(const cudf::column_view& col,
  * File contains only 4KB-aligned column data — metadata stays in memory.
  */
 static std::unique_ptr<idata_representation> convert_gpu_to_disk(
-  idata_representation& source,
+  const idata_representation& source,
   const memory::memory_space* target_memory_space,
   ::cuda::stream_ref stream,
   [[maybe_unused]] memory::reservation* reservation)
@@ -1847,7 +1847,7 @@ static std::unique_ptr<cudf::column> reconstruct_column_from_disk(
  * Column metadata comes from the in-memory disk_table_allocation.
  */
 static std::unique_ptr<idata_representation> convert_disk_to_gpu(
-  idata_representation& source,
+  const idata_representation& source,
   const memory::memory_space* target_memory_space,
   ::cuda::stream_ref stream,
   [[maybe_unused]] memory::reservation* reservation)

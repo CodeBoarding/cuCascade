@@ -202,7 +202,8 @@ void gpu_table_representation::rebind_stream(::cuda::stream_ref stream)
   rebind_table(table, stream);
 }
 
-std::unique_ptr<idata_representation> gpu_table_representation::clone(::cuda::stream_ref stream)
+std::unique_ptr<idata_representation> gpu_table_representation::clone(
+  ::cuda::stream_ref stream) const
 {
   CUCASCADE_FUNC_RANGE();
   validate_stream_device(stream, get_device_id());

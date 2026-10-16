@@ -176,7 +176,7 @@ class gpu_table_representation : public idata_representation {
    * @throws rmm::bad_alloc if allocating the copy fails
    * @throws cucascade::cuda_error if a CUDA runtime call fails
    */
-  std::unique_ptr<idata_representation> clone(::cuda::stream_ref stream) override;
+  std::unique_ptr<idata_representation> clone(::cuda::stream_ref stream) const override;
 
   /**
    * @brief Get the underlying cuDF table view
