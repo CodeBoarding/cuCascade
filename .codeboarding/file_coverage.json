@@ -1,0 +1,490 @@
+{
+  "version": 1,
+  "generated_at": "2026-10-30T00:11:04.039644+00:00",
+  "analyzed_files": [
+    "benchmark/benchmark_disk_converter.cpp",
+    "benchmark/benchmark_representation_converter.cpp",
+    "benchmark/parquet_benchmark.cpp",
+    "benchmark/parquet_io_benchmark.cpp",
+    "benchmark/parquet_s3_io_benchmark.cpp",
+    "benchmark/s3_parquet_benchmark.cpp",
+    "include/cucascade/cuda/device_copy_batch.hpp",
+    "include/cucascade/cuda/event.hpp",
+    "include/cucascade/cuda/stream.hpp",
+    "include/cucascade/cuda_utils.hpp",
+    "include/cucascade/cudf/bandwidth_profiler.hpp",
+    "include/cucascade/cudf/builtin_converters.hpp",
+    "include/cucascade/cudf/datasource.hpp",
+    "include/cucascade/cudf/gpu_data_representation.hpp",
+    "include/cucascade/cudf/host_data_representation.hpp",
+    "include/cucascade/cudf/host_table.hpp",
+    "include/cucascade/cudf/host_table_packed.hpp",
+    "include/cucascade/data/common.hpp",
+    "include/cucascade/data/data_batch.hpp",
+    "include/cucascade/data/data_repository.hpp",
+    "include/cucascade/data/data_repository_manager.hpp",
+    "include/cucascade/data/disk_data_representation.hpp",
+    "include/cucascade/data/disk_file_format.hpp",
+    "include/cucascade/data/disk_io_backend.hpp",
+    "include/cucascade/data/io_backend_registry.hpp",
+    "include/cucascade/data/representation_converter.hpp",
+    "include/cucascade/error.hpp",
+    "include/cucascade/exec/admission_control.hpp",
+    "include/cucascade/exec/completion_controller.hpp",
+    "include/cucascade/exec/config.hpp",
+    "include/cucascade/exec/cuda_event_completion_poll.hpp",
+    "include/cucascade/exec/invocable.hpp",
+    "include/cucascade/exec/scoped_dispatcher.hpp",
+    "include/cucascade/exec/semi_future.hpp",
+    "include/cucascade/exec/thread_pool.hpp",
+    "include/cucascade/exec/thread_util.hpp",
+    "include/cucascade/exec/try.hpp",
+    "include/cucascade/io/byte_range.hpp",
+    "include/cucascade/io/concurrent_queue.hpp",
+    "include/cucascade/io/config.hpp",
+    "include/cucascade/io/datasource_factory.hpp",
+    "include/cucascade/io/details/slot_pool.hpp",
+    "include/cucascade/io/io_context.hpp",
+    "include/cucascade/io/io_errors.hpp",
+    "include/cucascade/io/io_request.hpp",
+    "include/cucascade/io/io_utils.hpp",
+    "include/cucascade/io/kvikio/config.hpp",
+    "include/cucascade/io/kvikio/kvikio_context.hpp",
+    "include/cucascade/io/object_store_config.hpp",
+    "include/cucascade/io/rest/authorizer.hpp",
+    "include/cucascade/io/rest/config.hpp",
+    "include/cucascade/io/rest/curl_handle.hpp",
+    "include/cucascade/io/rest/object_store_lister.hpp",
+    "include/cucascade/io/rest/rest_ioctx.hpp",
+    "include/cucascade/io/rest/rest_reactor.hpp",
+    "include/cucascade/io/rest/s3/list_parser.hpp",
+    "include/cucascade/io/rest/s3/sigv4.hpp",
+    "include/cucascade/io/rest/s3/sigv4_authorizer.hpp",
+    "include/cucascade/io/rest/s3/static_credentials.hpp",
+    "include/cucascade/io/rest/types.hpp",
+    "include/cucascade/io/s3rdma/s3rdma_ioctx.hpp",
+    "include/cucascade/io/templated_ioctx.hpp",
+    "include/cucascade/io/types.hpp",
+    "include/cucascade/io/uri_parser.hpp",
+    "include/cucascade/io/uring/config.hpp",
+    "include/cucascade/io/uring/types.hpp",
+    "include/cucascade/io/uring/uring_ioctx.hpp",
+    "include/cucascade/io/uring/uring_reactor.hpp",
+    "include/cucascade/log/logging.hpp",
+    "include/cucascade/memory/chunked_resource_info.hpp",
+    "include/cucascade/memory/column_metadata.hpp",
+    "include/cucascade/memory/common.hpp",
+    "include/cucascade/memory/config.hpp",
+    "include/cucascade/memory/detail/reservation_aware_resource_adaptor_impl.hpp",
+    "include/cucascade/memory/disk_access_limiter.hpp",
+    "include/cucascade/memory/disk_table.hpp",
+    "include/cucascade/memory/error.hpp",
+    "include/cucascade/memory/fixed_size_host_memory_resource.hpp",
+    "include/cucascade/memory/memory_reservation.hpp",
+    "include/cucascade/memory/memory_reservation_manager.hpp",
+    "include/cucascade/memory/memory_space.hpp",
+    "include/cucascade/memory/notification_channel.hpp",
+    "include/cucascade/memory/null_device_memory_resource.hpp",
+    "include/cucascade/memory/numa_region_pinned_host_allocator.hpp",
+    "include/cucascade/memory/oom_handling_policy.hpp",
+    "include/cucascade/memory/reservation_aware_resource_adaptor.hpp",
+    "include/cucascade/memory/reservation_manager_configurator.hpp",
+    "include/cucascade/memory/small_pinned_host_memory_resource.hpp",
+    "include/cucascade/memory/stream_pool.hpp",
+    "include/cucascade/memory/topology_discovery.hpp",
+    "include/cucascade/memory/topology_index.hpp",
+    "include/cucascade/nvtx.hpp",
+    "include/cucascade/utils/atomics.hpp",
+    "include/cucascade/utils/error_utils.hpp",
+    "include/cucascade/utils/overloaded.hpp",
+    "scripts/compare_benchmarks.py",
+    "scripts/generate_api_docs.py",
+    "src/cuda/device_copy_batch.cpp",
+    "src/cuda/event.cpp",
+    "src/cudf/bandwidth_profiler.cpp",
+    "src/cudf/cudf_compat.hpp",
+    "src/cudf/datasource.cpp",
+    "src/cudf/gpu_data_representation.cpp",
+    "src/cudf/host_data_representation.cpp",
+    "src/cudf/representation_converter_builtins.cpp",
+    "src/data/data_batch.cpp",
+    "src/data/disk_data_representation.cpp",
+    "src/data/io_backend_internal.hpp",
+    "src/data/io_backend_registry.cpp",
+    "src/data/io_worker.hpp",
+    "src/data/pipeline_io_backend.cpp",
+    "src/data/representation_converter.cpp",
+    "src/exec/admission_control.cpp",
+    "src/exec/thread_util.cpp",
+    "src/io/datasource_factory.cpp",
+    "src/io/io_context.cpp",
+    "src/io/kvikio/kvikio_context.cpp",
+    "src/io/rest/curl_handle.cpp",
+    "src/io/rest/object_store_lister.cpp",
+    "src/io/rest/rest_ioctx.cpp",
+    "src/io/rest/rest_reactor.cpp",
+    "src/io/rest/s3/list_parser.cpp",
+    "src/io/rest/s3/sigv4.cpp",
+    "src/io/rest/s3/sigv4_authorizer.cpp",
+    "src/io/s3rdma/s3rdma_ioctx.cpp",
+    "src/io/uri_parser.cpp",
+    "src/io/uring/uring_ioctx.cpp",
+    "src/io/uring/uring_reactor.cpp",
+    "src/memory/common.cpp",
+    "src/memory/disk_access_limiter.cpp",
+    "src/memory/error.cpp",
+    "src/memory/fixed_size_host_memory_resource.cpp",
+    "src/memory/memory_reservation.cpp",
+    "src/memory/memory_reservation_manager.cpp",
+    "src/memory/memory_space.cpp",
+    "src/memory/notification_channel.cpp",
+    "src/memory/null_device_memory_resource.cpp",
+    "src/memory/numa_region_pinned_host_allocator.cpp",
+    "src/memory/oom_handling_policy.cpp",
+    "src/memory/pool_peer_access_detail.hpp",
+    "src/memory/reservation_aware_resource_adaptor.cpp",
+    "src/memory/reservation_manager_configurator.cpp",
+    "src/memory/small_pinned_host_memory_resource.cpp",
+    "src/memory/stream_pool.cpp",
+    "src/memory/topology_discovery.cpp"
+  ],
+  "not_analyzed_files": [
+    {
+      "path": "AGENTS.md",
+      "reason": "other"
+    },
+    {
+      "path": "CMakeLists.txt",
+      "reason": "other"
+    },
+    {
+      "path": "CMakePresets.json",
+      "reason": "other"
+    },
+    {
+      "path": "LICENSE.md",
+      "reason": "other"
+    },
+    {
+      "path": "README.md",
+      "reason": "other"
+    },
+    {
+      "path": "SECURITY.md",
+      "reason": "other"
+    },
+    {
+      "path": "benchmark/CMakeLists.txt",
+      "reason": "other"
+    },
+    {
+      "path": "benchmark/README.md",
+      "reason": "other"
+    },
+    {
+      "path": "benchmark/visualize_results.ipynb",
+      "reason": "other"
+    },
+    {
+      "path": "cmake/Modules/FindCUDAToolkit.cmake",
+      "reason": "other"
+    },
+    {
+      "path": "cmake/Modules/FindNuma.cmake",
+      "reason": "other"
+    },
+    {
+      "path": "cmake/cuCascadeConfig.cmake.in",
+      "reason": "other"
+    },
+    {
+      "path": "cmake/cuCascadeTopologyOnlyConfig.cmake.in",
+      "reason": "other"
+    },
+    {
+      "path": "docs/ARCHITECTURE.md",
+      "reason": "other"
+    },
+    {
+      "path": "docs/README.md",
+      "reason": "other"
+    },
+    {
+      "path": "docs/bandwidth-profiler.md",
+      "reason": "other"
+    },
+    {
+      "path": "docs/data-management.md",
+      "reason": "other"
+    },
+    {
+      "path": "docs/data_batch_state_transitions.md",
+      "reason": "other"
+    },
+    {
+      "path": "docs/development-guide.md",
+      "reason": "other"
+    },
+    {
+      "path": "docs/memory-management.md",
+      "reason": "other"
+    },
+    {
+      "path": "docs/topology-and-configuration.md",
+      "reason": "other"
+    },
+    {
+      "path": "include/cucascade/io/cache/config.hpp",
+      "reason": "codeboardingignore"
+    },
+    {
+      "path": "include/cucascade/io/cache/metadata_store.hpp",
+      "reason": "codeboardingignore"
+    },
+    {
+      "path": "include/cucascade/io/cache/prefetching_cache.hpp",
+      "reason": "codeboardingignore"
+    },
+    {
+      "path": "include/cucascade/io/cache/types.hpp",
+      "reason": "codeboardingignore"
+    },
+    {
+      "path": "pixi.toml",
+      "reason": "other"
+    },
+    {
+      "path": "scripts/verify_gds_environment.sh",
+      "reason": "other"
+    },
+    {
+      "path": "src/cuda/CMakeLists.txt",
+      "reason": "other"
+    },
+    {
+      "path": "src/cudf/CMakeLists.txt",
+      "reason": "other"
+    },
+    {
+      "path": "src/data/CMakeLists.txt",
+      "reason": "other"
+    },
+    {
+      "path": "src/exec/CMakeLists.txt",
+      "reason": "other"
+    },
+    {
+      "path": "src/io/CMakeLists.txt",
+      "reason": "other"
+    },
+    {
+      "path": "src/io/cache/metadata_store.cpp",
+      "reason": "codeboardingignore"
+    },
+    {
+      "path": "src/io/cache/prefetching_cache.cpp",
+      "reason": "codeboardingignore"
+    },
+    {
+      "path": "src/io/cache/types.cpp",
+      "reason": "codeboardingignore"
+    },
+    {
+      "path": "src/memory/CMakeLists.txt",
+      "reason": "other"
+    },
+    {
+      "path": "test/CMakeLists.txt",
+      "reason": "codeboardingignore"
+    },
+    {
+      "path": "test/cmake/check_no_cuda_driver_dependency.cmake",
+      "reason": "codeboardingignore"
+    },
+    {
+      "path": "test/cuda_driver_loading_test.cpp",
+      "reason": "codeboardingignore"
+    },
+    {
+      "path": "test/cudf/test_release_table_stream.cpp",
+      "reason": "codeboardingignore"
+    },
+    {
+      "path": "test/data/test_bandwidth_profiler.cpp",
+      "reason": "codeboardingignore"
+    },
+    {
+      "path": "test/data/test_data_batch.cpp",
+      "reason": "codeboardingignore"
+    },
+    {
+      "path": "test/data/test_data_repository.cpp",
+      "reason": "codeboardingignore"
+    },
+    {
+      "path": "test/data/test_data_repository_manager.cpp",
+      "reason": "codeboardingignore"
+    },
+    {
+      "path": "test/data/test_data_representation.cpp",
+      "reason": "codeboardingignore"
+    },
+    {
+      "path": "test/data/test_disk_host_converters.cpp",
+      "reason": "codeboardingignore"
+    },
+    {
+      "path": "test/data/test_disk_io_backend.cpp",
+      "reason": "codeboardingignore"
+    },
+    {
+      "path": "test/data/test_gpu_disk_converters.cpp",
+      "reason": "codeboardingignore"
+    },
+    {
+      "path": "test/data/test_io_worker.cpp",
+      "reason": "codeboardingignore"
+    },
+    {
+      "path": "test/data/test_representation_converter.cpp",
+      "reason": "codeboardingignore"
+    },
+    {
+      "path": "test/fake_cuda_driver_available.cpp",
+      "reason": "codeboardingignore"
+    },
+    {
+      "path": "test/fake_cuda_driver_incomplete.cpp",
+      "reason": "codeboardingignore"
+    },
+    {
+      "path": "test/io/cache/test_metadata_store.cpp",
+      "reason": "codeboardingignore"
+    },
+    {
+      "path": "test/io/kvikio/test_kvikio_config.cpp",
+      "reason": "codeboardingignore"
+    },
+    {
+      "path": "test/io/rest/loopback_range_server.hpp",
+      "reason": "codeboardingignore"
+    },
+    {
+      "path": "test/io/rest/mock_authorizer.hpp",
+      "reason": "codeboardingignore"
+    },
+    {
+      "path": "test/io/rest/s3/test_sigv4.cpp",
+      "reason": "codeboardingignore"
+    },
+    {
+      "path": "test/io/rest/s3/test_sigv4_authorizer.cpp",
+      "reason": "codeboardingignore"
+    },
+    {
+      "path": "test/io/rest/s3/test_static_credentials.cpp",
+      "reason": "codeboardingignore"
+    },
+    {
+      "path": "test/io/rest/test_object_store_lister.cpp",
+      "reason": "codeboardingignore"
+    },
+    {
+      "path": "test/io/rest/test_rest_footer_resolve.cpp",
+      "reason": "codeboardingignore"
+    },
+    {
+      "path": "test/io/rest/test_rest_validation_tag.cpp",
+      "reason": "codeboardingignore"
+    },
+    {
+      "path": "test/io/rest/test_shared_byte_span.cpp",
+      "reason": "codeboardingignore"
+    },
+    {
+      "path": "test/io/test_datasource_registry.cpp",
+      "reason": "codeboardingignore"
+    },
+    {
+      "path": "test/io/test_dispatch_failure_hook.cpp",
+      "reason": "codeboardingignore"
+    },
+    {
+      "path": "test/io/test_uri_parser.cpp",
+      "reason": "codeboardingignore"
+    },
+    {
+      "path": "test/memory/test_gpu_kernels.cu",
+      "reason": "codeboardingignore"
+    },
+    {
+      "path": "test/memory/test_memory_reservation_manager.cpp",
+      "reason": "codeboardingignore"
+    },
+    {
+      "path": "test/memory/test_pool_peer_access.cpp",
+      "reason": "codeboardingignore"
+    },
+    {
+      "path": "test/memory/test_pool_peer_access_regression.cpp",
+      "reason": "codeboardingignore"
+    },
+    {
+      "path": "test/memory/test_reservation_aware_resource_adaptor.cpp",
+      "reason": "codeboardingignore"
+    },
+    {
+      "path": "test/memory/test_reservation_manager_configurator.cpp",
+      "reason": "codeboardingignore"
+    },
+    {
+      "path": "test/memory/test_small_pinned_host_memory_resource.cpp",
+      "reason": "codeboardingignore"
+    },
+    {
+      "path": "test/memory/test_topology_discovery.cpp",
+      "reason": "codeboardingignore"
+    },
+    {
+      "path": "test/topology_discovery_link_probe.cpp",
+      "reason": "codeboardingignore"
+    },
+    {
+      "path": "test/unittest.cpp",
+      "reason": "codeboardingignore"
+    },
+    {
+      "path": "test/unittest_topology_discovery.cpp",
+      "reason": "codeboardingignore"
+    },
+    {
+      "path": "test/utils/cudf_test_utils.cpp",
+      "reason": "codeboardingignore"
+    },
+    {
+      "path": "test/utils/cudf_test_utils.hpp",
+      "reason": "codeboardingignore"
+    },
+    {
+      "path": "test/utils/mock_test_utils.hpp",
+      "reason": "codeboardingignore"
+    },
+    {
+      "path": "test/utils/range_test_utils.hpp",
+      "reason": "codeboardingignore"
+    },
+    {
+      "path": "test/utils/test_memory_resources.hpp",
+      "reason": "codeboardingignore"
+    }
+  ],
+  "summary": {
+    "total_files": 227,
+    "analyzed": 145,
+    "not_analyzed": 82,
+    "not_analyzed_by_reason": {
+      "other": 29,
+      "codeboardingignore": 53
+    }
+  }
+}
