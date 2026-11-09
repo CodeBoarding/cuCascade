@@ -582,16 +582,21 @@ void rest_reactor::start()
   _running   = true;
   _accepting = true;
   try {
-    _worker = std::jthread([this](std::stop_token const& st) { worker_loop(st); },
-                           _stop_source.get_token());
+    auto cpus = cucascade::exec::thread_util::get_process_affinity();
+    auto name = _tname.empty() ? std::string{} : _tname + "_worker";
+    _worker   = std::jthread(
+      [this, cpus = std::move(cpus), name = std::move(name)](std::stop_token const& st) {
+        std::ignore = cucascade::exec::thread_util::set_current_thread_affinity(cpus);
+        if (!name.empty()) {
+          std::ignore = cucascade::exec::thread_util::set_current_thread_name(name);
+        }
+        worker_loop(st);
+      },
+      _stop_source.get_token());
   } catch (...) {
     _running   = false;
     _accepting = false;
     throw;
-  }
-  if (!_tname.empty()) {
-    auto const full_name = _tname + "_worker";
-    std::ignore          = cucascade::exec::thread_util::set_thread_name(_worker, full_name);
   }
 }
 

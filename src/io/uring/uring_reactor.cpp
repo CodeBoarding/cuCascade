@@ -493,17 +493,23 @@ void uring_reactor::start()
 
   std::lock_guard lock(_enqueue_mutex);
   try {
+    auto cpus = cucascade::exec::thread_util::get_process_affinity();
+    auto name = _tname.empty() ? std::string{} : _tname + "_worker";
     _accepting.store(true, std::memory_order_release);
-    _worker = std::jthread([this](std::stop_token stop_token) { worker_loop(stop_token); },
-                           _stop_source.get_token());
+    _worker = std::jthread(
+      [this, cpus = std::move(cpus), name = std::move(name)](std::stop_token stop_token) {
+        // io_uring's own workers inherit this mask on the first submission.
+        std::ignore = cucascade::exec::thread_util::set_current_thread_affinity(cpus);
+        if (!name.empty()) {
+          std::ignore = cucascade::exec::thread_util::set_current_thread_name(name);
+        }
+        worker_loop(stop_token);
+      },
+      _stop_source.get_token());
   } catch (...) {
     _accepting.store(false, std::memory_order_release);
     _bounce_storage.reset();
     throw;
-  }
-  if (!_tname.empty()) {
-    auto const name = _tname + "_worker";
-    std::ignore     = cucascade::exec::thread_util::set_thread_name(_worker, name);
   }
 }
 

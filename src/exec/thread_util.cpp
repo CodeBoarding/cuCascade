@@ -179,6 +179,19 @@ std::vector<int> get_current_thread_affinity() noexcept
   return get_thread_affinity(::pthread_self());
 }
 
+std::vector<int> get_process_affinity()
+{
+  // On Linux the process ID identifies the main thread, not the caller.
+  cpu_set_t mask{};
+  if (::sched_getaffinity(::getpid(), sizeof(mask), &mask) != 0) { return {}; }
+  std::vector<int> ids;
+  ids.reserve(static_cast<std::size_t>(CPU_COUNT(&mask)));
+  for (int i = 0; i < CPU_SETSIZE; ++i) {
+    if (CPU_ISSET(static_cast<std::size_t>(i), &mask)) { ids.push_back(i); }
+  }
+  return ids;
+}
+
 // ---------------------------------------------------------------------------
 // scheduling policy and priority
 // ---------------------------------------------------------------------------
