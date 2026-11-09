@@ -19,9 +19,9 @@
 #pragma once
 
 #include <cucascade/exec/invocable.hpp>
+#include <cucascade/exec/thread_util.hpp>
 #include <cucascade/log/logging.hpp>
 
-#include <algorithm>
 #include <concepts>
 #include <condition_variable>
 #include <exception>
@@ -45,12 +45,6 @@ class static_thread_pool {
   {
     threads_.reserve(static_cast<std::size_t>(num_threads));
 
-    cpu_set_t cpuset;
-    CPU_ZERO(&cpuset);
-    std::for_each(cpu_ids.begin(), cpu_ids.end(), [&cpuset](int cpu_id) {
-      CPU_SET(static_cast<std::size_t>(cpu_id), &cpuset);
-    });
-
     std::unique_ptr<std::latch> init_latch;
     if (per_thread_init) { init_latch = std::make_unique<std::latch>(num_threads); }
 
@@ -65,12 +59,8 @@ class static_thread_pool {
         }
         work_loop();
       });
-      if (!name.empty()) {
-        pthread_setname_np(t.native_handle(), (name + "_" + std::to_string(i)).c_str());
-      }
-      if (!cpu_ids.empty()) {
-        pthread_setaffinity_np(t.native_handle(), sizeof(cpu_set_t), &cpuset);
-      }
+      if (!name.empty()) { (void)thread_util::set_thread_name(t, name + "_" + std::to_string(i)); }
+      if (!cpu_ids.empty()) { (void)thread_util::set_thread_affinity(t, cpu_ids); }
     }
 
     if (init_latch) { init_latch->wait(); }
