@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "generated_at": "2026-11-09T16:59:02.336265+00:00",
+    "generated_at": "2026-11-11T01:37:39.509050+00:00",
     "source_tree_hash": "7e7e83f502db609545a28da08dc8b11f4fdd68914166c7c937b4495954c76ff4",
     "repo_name": ".codeboarding-target",
     "depth_level": 2,
@@ -1080,7 +1080,7 @@
       }
     }
   },
-  "description": "cuCascade provides a GPU-accelerated tiered data and memory management system facilitating asynchronous I/O staging, data batch transitions, and cuDF representation conversions across disk, host, and GPU memory spaces, supported by performance benchmarks and validation scripts.",
+  "description": "Root scope of cuCascade containing public API headers, runtime implementations for memory, execution, and data I/O pipelines, as well as performance benchmark suites and automation scripts.",
   "files": {
     "include/cucascade/cuda/device_copy_batch.hpp": {
       "method_keys": [
@@ -21640,8 +21640,8 @@
   },
   "components": [
     {
-      "name": "Cascade Header Interfaces",
-      "description": "Defines public interfaces, data structures, memory management abstractions, and I/O execution contracts across host, disk, and GPU memory tiers.",
+      "name": "Public C++ API Headers",
+      "description": "Declares public interfaces, types, and configurations for data representation, I/O backends, memory spaces, and execution primitives.",
       "key_entities": [],
       "source_cluster_ids": [
         "6",
@@ -23839,8 +23839,8 @@
       "can_expand": true,
       "components": [
         {
-          "name": "Asynchronous IO Subsystem",
-          "description": "Provides pluggable asynchronous I/O abstractions, contexts, and reactors for storage backends including io_uring, REST S3, KvikIO, and S3RDMA.",
+          "name": "Asynchronous IO Backends",
+          "description": "Provides asynchronous multi-backend storage I/O interfaces supporting io_uring, REST/S3, kvikio, and S3-RDMA.",
           "key_entities": [],
           "source_cluster_ids": [
             "1.27",
@@ -24487,8 +24487,8 @@
           "components_relations": []
         },
         {
-          "name": "Memory Reservation Management",
-          "description": "Manages multi-tier memory allocations, topology discovery, NUMA-aware resources, and reservation budgets across host and device tiers.",
+          "name": "Tiered Memory Management",
+          "description": "Manages multi-tier device, host, NUMA, and disk memory allocation, reservations, and pressure-driven downgrades.",
           "key_entities": [],
           "source_cluster_ids": [
             "1.58",
@@ -25158,8 +25158,8 @@
           "components_relations": []
         },
         {
-          "name": "Task Execution Framework",
-          "description": "Provides concurrency primitives, scoped thread pools, admission control, and semi-futures for asynchronous operation scheduling.",
+          "name": "Task Execution Runtime",
+          "description": "Implements threading primitives, thread pools, semi-future continuations, and admission control for concurrent tasks.",
           "key_entities": [],
           "source_cluster_ids": [
             "1.17",
@@ -25600,7 +25600,7 @@
         },
         {
           "name": "Data Batch Management",
-          "description": "Defines partitioned repositories, stateful data batches, and storage representation converters across memory tiers.",
+          "description": "Coordinates pipeline data batches, thread-safe repositories, and cross-tier representation transitions.",
           "key_entities": [],
           "source_cluster_ids": [
             "1.8",
@@ -25835,8 +25835,8 @@
           "components_relations": []
         },
         {
-          "name": "Core CUDA Utilities",
-          "description": "Supplies low-level CUDA stream synchronization, batched memory transfers, logging, error handling, and profiling helpers.",
+          "name": "CUDA Utilities and Diagnostics",
+          "description": "Supplies core CUDA event handling, asynchronous device memory copies, logging, and error utilities.",
           "key_entities": [],
           "source_cluster_ids": [
             "1.0",
@@ -25962,8 +25962,8 @@
           "components_relations": []
         },
         {
-          "name": "CUDF Table Integration",
-          "description": "Bridges cuDF columnar tables and datasources into the Cascade memory tiering and asynchronous I/O framework.",
+          "name": "CUDF Tabular Integration",
+          "description": "Bridges libcuCascade I/O and representations with libcudf datasources and columnar tables.",
           "key_entities": [],
           "source_cluster_ids": [
             "1.2",
@@ -26108,8 +26108,8 @@
       "components_relations": []
     },
     {
-      "name": "Cascade Runtime Implementation",
-      "description": "Implements core tiered memory allocation, data batch synchronization, asynchronous I/O reactors, and cuDF conversion utilities.",
+      "name": "Core Engine Runtime Implementation",
+      "description": "Implements data transfer pipelines, storage backends, memory reservations, and cuDF datasource integrations.",
       "key_entities": [],
       "source_cluster_ids": [
         "89",
@@ -26693,8 +26693,8 @@
       "can_expand": true,
       "components": [
         {
-          "name": "Asynchronous IO Backends",
-          "description": "Provides asynchronous I/O execution contexts, reactors, and readers supporting io_uring, REST/S3, and kvikIO backends.",
+          "name": "Storage and Network IO Backend",
+          "description": "Provides pluggable asynchronous I/O contexts and data sources for local storage, REST/S3, and io_uring.",
           "key_entities": [],
           "source_cluster_ids": [
             "2.12",
@@ -26896,8 +26896,8 @@
           "components_relations": []
         },
         {
-          "name": "Tiered Memory Management",
-          "description": "Manages tiered memory spaces, memory reservations, NUMA topology discovery, and out-of-memory handling policies.",
+          "name": "Memory Allocation and Topology",
+          "description": "Manages device and host memory allocations, NUMA topology discovery, reservations, and out-of-memory policies.",
           "key_entities": [],
           "source_cluster_ids": [
             "2.23",
@@ -27085,8 +27085,8 @@
           "components_relations": []
         },
         {
-          "name": "cuDF Data Adapters",
-          "description": "Bridges cuDF data structures with Cascade I/O contexts and provides format and data representations across devices.",
+          "name": "Dataframe Representation and Source Adapters",
+          "description": "Implements GPU and host data table representations and datasource bindings backed by cuDF.",
           "key_entities": [],
           "source_cluster_ids": [
             "2.0",
@@ -27207,8 +27207,8 @@
           "components_relations": []
         },
         {
-          "name": "Data Batching and Disk Pipeline",
-          "description": "Manages batch data containers and disk pipeline I/O backends for overlapping device transfers with storage.",
+          "name": "Disk Data and Batch Management",
+          "description": "Coordinates disk-backed data batches, disk data representations, and asynchronous pipeline I/O backends.",
           "key_entities": [],
           "source_cluster_ids": [
             "2.6",
@@ -27294,7 +27294,7 @@
         },
         {
           "name": "Thread Execution Utilities",
-          "description": "Provides OS-level thread management utilities for thread naming, CPU core affinity, scheduling policy, and niceness.",
+          "description": "Utilities for configuring thread names, CPU affinity, scheduling policies, and thread niceness.",
           "key_entities": [],
           "source_cluster_ids": [
             "2.11"
@@ -27335,8 +27335,8 @@
       "components_relations": []
     },
     {
-      "name": "Performance Benchmark Suite",
-      "description": "Evaluates throughput and latency for data representation conversions, hybrid Parquet scanning, and storage backends.",
+      "name": "Storage and Conversion Benchmarks",
+      "description": "Measures throughput and latency for parquet reading, representation conversion, and storage I/O mechanisms.",
       "key_entities": [],
       "source_cluster_ids": [
         "0",
@@ -27501,20 +27501,14 @@
       "components_relations": []
     },
     {
-      "name": "Benchmarking and Documentation Tooling",
-      "description": "Automates benchmark regression validation and generates API documentation from project sources.",
+      "name": "Developer and Benchmark Utilities",
+      "description": "Automates benchmark result regression testing and API documentation generation.",
       "key_entities": [
         {
           "qualified_name": "scripts.compare_benchmarks.load_benchmark_real_times",
           "reference_file": "scripts/compare_benchmarks.py",
           "reference_start_line": 7,
           "reference_end_line": 19
-        },
-        {
-          "qualified_name": "scripts.compare_benchmarks.main",
-          "reference_file": "scripts/compare_benchmarks.py",
-          "reference_start_line": 22,
-          "reference_end_line": 85
         }
       ],
       "source_cluster_ids": [
