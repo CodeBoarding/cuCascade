@@ -19,9 +19,9 @@
 #pragma once
 
 #include <cucascade/exec/invocable.hpp>
+#include <cucascade/exec/thread_util.hpp>
 #include <cucascade/log/logging.hpp>
 
-#include <algorithm>
 #include <concepts>
 #include <condition_variable>
 #include <exception>
@@ -29,6 +29,7 @@
 #include <latch>
 #include <mutex>
 #include <queue>
+#include <stdexcept>
 #include <string>
 #include <thread>
 #include <utility>
@@ -38,42 +39,51 @@ namespace cucascade::exec {
 
 class static_thread_pool {
  public:
+  /// Start all workers before returning. Names and best-effort affinity are
+  /// applied before per_thread_init. An empty CPU list uses the process main
+  /// thread's mask, rather than inheriting a potentially pinned creator.
+  /// Throws for a non-positive width or failed initialization, after joining
+  /// any started workers. The initializer must be safe to call concurrently.
   explicit static_thread_pool(int num_threads,
                               const std::string& name               = "thread_pool",
                               std::vector<int> cpu_ids              = {},
                               std::function<void()> per_thread_init = nullptr)
   {
+    if (num_threads <= 0) { throw std::invalid_argument("thread pool width must be positive"); }
     threads_.reserve(static_cast<std::size_t>(num_threads));
+    if (cpu_ids.empty()) { cpu_ids = thread_util::get_process_affinity(); }
 
-    cpu_set_t cpuset;
-    CPU_ZERO(&cpuset);
-    std::for_each(cpu_ids.begin(), cpu_ids.end(), [&cpuset](int cpu_id) {
-      CPU_SET(static_cast<std::size_t>(cpu_id), &cpuset);
-    });
-
-    std::unique_ptr<std::latch> init_latch;
-    if (per_thread_init) { init_latch = std::make_unique<std::latch>(num_threads); }
-
-    auto* init_fn_ptr = per_thread_init ? &per_thread_init : nullptr;
-    auto* latch_ptr   = init_latch.get();
-
-    for (int i = 0; i < num_threads; ++i) {
-      auto& t = threads_.emplace_back([this, init_fn_ptr, latch_ptr]() {
-        if (init_fn_ptr) {
-          (*init_fn_ptr)();
-          latch_ptr->count_down();
-        }
-        work_loop();
-      });
-      if (!name.empty()) {
-        pthread_setname_np(t.native_handle(), (name + "_" + std::to_string(i)).c_str());
+    std::latch initialized{num_threads};
+    std::exception_ptr init_error;
+    try {
+      for (int i = 0; i < num_threads; ++i) {
+        auto worker_name = name.empty() ? std::string{} : name + "_" + std::to_string(i);
+        threads_.emplace_back([&, worker_name = std::move(worker_name)] {
+          bool ready = false;
+          try {
+            if (!worker_name.empty()) { (void)thread_util::set_current_thread_name(worker_name); }
+            (void)thread_util::set_current_thread_affinity(cpu_ids);
+            if (per_thread_init) { per_thread_init(); }
+            ready = true;
+          } catch (...) {
+            std::lock_guard lock(mu_);
+            if (!init_error) { init_error = std::current_exception(); }
+          }
+          initialized.count_down();
+          if (ready) { work_loop(); }
+        });
       }
-      if (!cpu_ids.empty()) {
-        pthread_setaffinity_np(t.native_handle(), sizeof(cpu_set_t), &cpuset);
+      initialized.wait();
+      if (init_error) { std::rethrow_exception(init_error); }
+    } catch (...) {
+      // The destructor does not run if construction fails. Keep the startup
+      // state above alive until every started worker has stopped using it.
+      stop();
+      for (auto& t : threads_) {
+        if (t.joinable()) { t.join(); }
       }
+      throw;
     }
-
-    if (init_latch) { init_latch->wait(); }
   }
 
   static_thread_pool(const static_thread_pool&)            = delete;

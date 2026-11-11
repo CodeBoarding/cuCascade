@@ -93,6 +93,12 @@ inline constexpr std::size_t max_thread_name_len = 15;
 [[nodiscard]] std::vector<int> get_thread_affinity(pthread_t handle) noexcept;
 [[nodiscard]] std::vector<int> get_current_thread_affinity() noexcept;
 
+/// Read the main thread's CPU mask, even when called from a pinned worker.
+/// Pools and reactors use this as their default instead of inheriting the
+/// creator's affinity. Returns an empty vector on syscall failure; allocation
+/// failures propagate so callers can recover before starting any threads.
+[[nodiscard]] std::vector<int> get_process_affinity();
+
 // ---------------------------------------------------------------------------
 // scheduling policy and priority
 // ---------------------------------------------------------------------------

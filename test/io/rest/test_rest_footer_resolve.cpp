@@ -20,6 +20,7 @@
 
 #include <cucascade/exec/scoped_dispatcher.hpp>
 #include <cucascade/exec/thread_pool.hpp>
+#include <cucascade/exec/thread_util.hpp>
 #include <cucascade/io/rest/rest_ioctx.hpp>
 
 #include <catch2/catch_all.hpp>
@@ -1115,4 +1116,57 @@ TEST_CASE("batched footer resolve reuses at most the configured in-flight connec
   }
   CHECK(server.get_count() == paths.size());
   CHECK(server.accepted_connection_count() <= inflight);
+}
+
+TEST_CASE("REST worker startup escapes a pinned creator before authorizing requests",
+          "[rest][affinity]")
+{
+  namespace thread_util   = cucascade::exec::thread_util;
+  namespace rest          = cucascade::io::rest;
+  auto const process_cpus = thread_util::get_current_thread_affinity();
+  REQUIRE_FALSE(process_cpus.empty());
+  if (process_cpus.size() < 2) { SKIP("requires at least two allowed CPUs"); }
+
+  // Warmup authorizes on the real reactor worker. Observe its OS state there,
+  // then decline the request so this test needs no network or credentials.
+  struct observing_authorizer : rest::request_authorizer {
+    std::promise<std::pair<std::string, std::vector<int>>> observed;
+
+    rest::authorized_request authorize(rest::object_ref const&,
+                                       rest::request_method,
+                                       std::chrono::seconds) override
+    {
+      throw std::runtime_error("unexpected object request");
+    }
+
+    rest::authorized_request authorize_list(std::string_view,
+                                            std::string_view,
+                                            std::chrono::seconds) override
+    {
+      observed.set_value(
+        {thread_util::get_current_thread_name(), thread_util::get_current_thread_affinity()});
+      throw std::runtime_error("warmup observation complete");
+    }
+  };
+
+  auto result             = std::async(std::launch::async, [&] {
+    std::array<int, 1> pinned{process_cpus.front()};
+    if (!thread_util::set_current_thread_affinity(pinned)) {
+      throw std::runtime_error("cannot pin the creator thread");
+    }
+    auto authorizer = std::make_shared<observing_authorizer>();
+    auto observed   = authorizer->observed.get_future();
+    auto context =
+      std::make_shared<rest_reactor::reactor_context>(test_config(), authorizer, nullptr);
+    rest_reactor reactor{std::move(context), "rest"};
+    reactor.start();
+    reactor.warmup("bucket");
+    if (observed.wait_for(5s) != std::future_status::ready) {
+      throw std::runtime_error("reactor did not authorize warmup");
+    }
+    return observed.get();
+  });
+  auto const [name, cpus] = result.get();
+  CHECK(name == "rest_worker");
+  CHECK(cpus == process_cpus);
 }
