@@ -53,25 +53,7 @@ struct object_identity {
 
   /// A key naming this identity of the object at @p locator.  The length
   /// prefix makes arbitrary paths and tags unambiguous; an ETag is never parsed.
-  [[nodiscard]] std::string cache_key(std::string_view locator) const
-  {
-    std::string key = std::to_string(locator.size());
-    key.push_back(':');
-    key.append(locator);
-    key.push_back(':');
-    key.append(std::to_string(static_cast<unsigned>(kind)));
-    key.push_back(':');
-    key.append(std::to_string(size));
-    key.push_back(':');
-    key.append(std::to_string(device));
-    key.push_back(':');
-    key.append(std::to_string(inode));
-    key.push_back(':');
-    key.append(std::to_string(ctime_ns));
-    key.push_back(':');
-    key.append(version);
-    return key;
-  }
+  [[nodiscard]] std::string cache_key(std::string_view locator) const;
 };
 
 /// A process-wide, strictly increasing number for each opened object (never 0):
