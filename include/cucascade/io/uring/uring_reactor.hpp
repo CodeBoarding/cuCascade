@@ -22,6 +22,7 @@
 #include <cucascade/io/cache/types.hpp>
 #include <cucascade/io/concurrent_queue.hpp>
 #include <cucascade/io/details/slot_pool.hpp>
+#include <cucascade/io/tiered_queue.hpp>
 #include <cucascade/io/types.hpp>
 #include <cucascade/io/uring/config.hpp>
 #include <cucascade/io/uring/types.hpp>
@@ -35,6 +36,7 @@
 
 #include <array>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -57,29 +59,45 @@ namespace cucascade::io::uring {
  * Passive bag of native handles. The buffered @c O_RDONLY fd and, when the
  * filesystem supports it, an optional @c O_DIRECT fd are produced by
  * @c uring_reactor::create_io_object. This class does no I/O of its own.
+ *
+ * The object carries the @c local_stat identity of its buffered fd (captured
+ * by the reactor, or from the fd here) and takes its size from it; when the fd
+ * cannot be stat'ed, the object keeps the given size and the base class's
+ * open-local identity.
  */
 class local_io_object : public io_object {
  public:
+  /// @p captured is the identity the reactor took from @p fd; when it is not a
+  /// @c local_stat identity, it is captured from @p fd here.
   local_io_object(std::string path,
                   file_descriptor fd,
                   file_descriptor fd_direct,
                   size_t file_size,
-                  std::string_view hash = "")
+                  std::string_view hash    = "",
+                  object_identity captured = {})
     : _path(std::move(path)),
+      _hash(hash.empty() ? std::string_view{_path} : hash),
       _fd(std::move(fd)),
       _fd_direct(std::move(fd_direct)),
       _file_size(file_size)
   {
-    if (hash.empty()) {
-      _hash = _path;
+    _has_identity = captured.kind == identity_kind::local_stat;
+    if (_has_identity) {
+      _identity = std::move(captured);
     } else {
-      _hash = hash;
+      _has_identity = capture_local_identity(_fd.get(), _identity);
     }
+    if (_has_identity) { _file_size = _identity.size; }
   }
 
   [[nodiscard]] const std::string& raw_file_cache_id() const noexcept override { return _path; }
   [[nodiscard]] const std::string& object_path() const noexcept override { return _path; }
   [[nodiscard]] size_t size() const noexcept override { return _file_size; }
+
+  [[nodiscard]] object_identity identity() const override
+  {
+    return _has_identity ? _identity : io_object::identity();
+  }
 
   [[nodiscard]] int fd() const noexcept { return _fd.get(); }
   [[nodiscard]] int fd_direct() const noexcept { return _fd_direct.get(); }
@@ -94,6 +112,8 @@ class local_io_object : public io_object {
   file_descriptor _fd;
   file_descriptor _fd_direct;
   size_t _file_size{0};
+  object_identity _identity;
+  bool _has_identity{false};
 };
 
 // ---------------------------------------------------------------------------
@@ -104,9 +124,17 @@ class local_io_object : public io_object {
  * @brief Single-threaded local-file I/O reactor.
  *
  * Owns one @c io_uring, one worker thread, a fixed pool of pinned staging
- * blocks, and an MPSC request queue. Physical operations use O_DIRECT only
- * when the worker determines that the complete transfer is compatible.
- * Models the reactor concept consumed by @c templated_ioctx.
+ * blocks, and a two-tier request queue (see @ref io_priority). The worker
+ * takes a high-priority request before a low one, and parks an active low
+ * request at a slice boundary while high requests are waiting, so a demand
+ * read does not wait behind a whole-split readahead.  Priority is bounded,
+ * not strict: after @c config::low_service_interval high requests have
+ * started while low work waited, the low tier gets one turn of at least one
+ * quantum (@c config::slices_per_pass slices) even if high work is waiting, so
+ * a demand read blocked on an in-flight prefetch is not starved by a stream of
+ * other high requests (0 restores strict priority). Physical operations use
+ * O_DIRECT only when the worker determines that the complete transfer is
+ * compatible. Models the reactor concept consumed by @c templated_ioctx.
  */
 class uring_reactor {
  public:
@@ -200,13 +228,66 @@ class uring_reactor {
     return _queued_bytes.load(std::memory_order_relaxed);
   }
 
+  /// Log2 histogram of queue delays: bucket b counts delays d (microseconds) with
+  /// std::bit_width(d) == b, i.e. [2^(b-1), 2^b) us; the last bucket is open-ended.
+  static constexpr std::size_t queue_delay_buckets = 26;
+
+  /// One io_priority tier's queue-delay window (see @ref gauges::queue_delay_for).
+  struct queue_delay_stats {
+    std::uint64_t count{0};
+    std::uint64_t sum_ns{0};
+    std::uint64_t max_ns{0};
+    std::array<std::uint32_t, queue_delay_buckets> histogram{};
+  };
+
+  /// Diagnostic view of the worker's depth and queueing.  The worker publishes
+  /// these with relaxed stores once per loop pass (right before it waits for a
+  /// completion), so every field is approximate and may be one pass stale.
+  struct gauges {
+    std::uint32_t inflight_ops{0};      ///< physical ops owned by the kernel
+    std::uint32_t max_inflight_ops{0};  ///< peak since the previous take_gauges()
+    std::uint32_t pending_ops{0};       ///< planned ops waiting for a staging slot
+    /// Slices of the active request not yet expanded into physical ops.
+    std::uint32_t active_remaining_slices{0};
+    std::size_t queued_requests{0};      ///< requests queued behind the active one
+    std::size_t queued_low_requests{0};  ///< of which on the low-priority tier
+    std::size_t queued_bytes{0};         ///< see @ref queued_bytes
+    std::uint64_t requests_started{0};   ///< cumulative requests taken off the queue
+    std::uint64_t bytes_submitted{0};    ///< cumulative physical bytes submitted
+    /// Cumulative times an active low request was parked for a high one.
+    std::uint64_t preemptions{0};
+    /// Cumulative times the low tier was served ahead of waiting high work by
+    /// the bounded-service rule (see @c config::low_service_interval).
+    std::uint64_t low_service_grants{0};
+    /// Queue delay (enqueue -> first slice expanded) of requests whose first slice
+    /// was expanded since the previous take_gauges(), per priority tier.
+    queue_delay_stats queue_delay_high{};
+    queue_delay_stats queue_delay_low{};
+
+    /// The queue-delay window of @p priority's tier (@c automatic counts as high,
+    /// as requests are resolved before they are queued).
+    [[nodiscard]] queue_delay_stats const& queue_delay_for(io_priority priority) const noexcept
+    {
+      return priority == io_priority::low ? queue_delay_low : queue_delay_high;
+    }
+  };
+
+  /// Snapshot the gauges and restart the @c max_inflight_ops window.
+  [[nodiscard]] gauges take_gauges() noexcept;
+
   /// Whether @p path can be served by this reactor.  Local-disk only:
   /// returns true iff the path refers to an existing, accessible file.
   [[nodiscard]] static bool supports(std::string_view path);
 
   /// Open the buffered fd and opportunistically open an O_DIRECT fd for
   /// @p path. The buffered handle is always required; an unsupported direct
-  /// handle simply makes worker-planned operations use buffered I/O.
+  /// handle simply makes worker-planned operations use buffered I/O.  The
+  /// O_DIRECT fd reopens the buffered one through @c /proc/self/fd (the path
+  /// only where procfs is not mounted), and the object carries the buffered
+  /// fd's @c local_stat identity and size.
+  /// @throws descriptor_mismatch_error when, on two attempts, the two fds do
+  ///         not name the same file (the path is being replaced concurrently),
+  ///         or when the O_DIRECT fd cannot be stat'ed.
   static std::unique_ptr<io_object_type> create_io_object(std::string path);
 
   /// fstat the open fd to get the file's current size.
@@ -223,7 +304,10 @@ class uring_reactor {
   /// The reactor reads through O_DIRECT, so @c IO_BLOCK_SIZE is the minimum
   /// viable alignment and is used when @p alignment is unset.  A caller-supplied
   /// alignment is honored only when it is at least @c IO_BLOCK_SIZE; a smaller
-  /// value is ignored in favor of the reactor's own alignment.
+  /// value is ignored in favor of the reactor's own alignment.  Ranges with a
+  /// negative offset or no bytes are dropped and every end stays within
+  /// INT64_MAX (see @c io_utils::align_and_coalesce).  Returns no ranges if
+  /// allocating the result fails.
   static std::vector<byte_range> align_and_coalesce(
     std::span<const byte_range> ranges, std::optional<size_t> alignment = std::nullopt) noexcept;
 
@@ -244,10 +328,39 @@ class uring_reactor {
   std::size_t _bounce_slot_size;
   std::stop_source _stop_source;
   std::jthread _worker;
-  blocking_concurrent_queue<std::unique_ptr<grouped_io_request>> _requests;
+  tiered_blocking_queue<std::unique_ptr<grouped_io_request>> _requests;
   mutable std::mutex _enqueue_mutex;
   std::atomic<std::size_t> _queued_bytes{0};
   std::atomic<bool> _accepting{false};
+
+  // Gauges (see @ref gauges): written only by the worker, read by take_gauges().
+  std::atomic<std::uint32_t> _gauge_inflight{0};
+  std::atomic<std::uint32_t> _gauge_max_inflight{0};
+  std::atomic<std::uint32_t> _gauge_pending{0};
+  std::atomic<std::uint32_t> _gauge_active_slices{0};
+  std::atomic<std::uint64_t> _gauge_requests_started{0};
+  std::atomic<std::uint64_t> _gauge_bytes_submitted{0};
+  std::atomic<std::uint64_t> _gauge_preemptions{0};
+  std::atomic<std::uint64_t> _gauge_low_service_grants{0};
+
+  /// Worker-side accumulators behind gauges::queue_delay; take_gauges() swaps them out.
+  struct queue_delay_atomics {
+    std::atomic<std::uint64_t> count{0};
+    std::atomic<std::uint64_t> sum_ns{0};
+    std::atomic<std::uint64_t> max_ns{0};
+    std::array<std::atomic<std::uint32_t>, queue_delay_buckets> histogram{};
+  };
+  queue_delay_atomics _gauge_queue_delay_high;
+  queue_delay_atomics _gauge_queue_delay_low;
+  /// Record one request's queue delay (worker thread only).
+  void record_queue_delay(grouped_io_request const& request) noexcept;
+
+  /// config::slices_per_pass with 0 (no cap) mapped to SIZE_MAX; read once at
+  /// construction.
+  std::size_t _slices_per_pass{1};
+  /// Slices a low request granted service must expand before it can be parked
+  /// again: _slices_per_pass, capped at max_slices_per_pass.
+  std::size_t _low_service_quantum{1};
 };
 
 }  // namespace cucascade::io::uring

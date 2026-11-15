@@ -26,8 +26,7 @@
  * `BlockingConcurrentQueue`. This header decouples that code from *which*
  * moodycamel it links against: standalone builds fetch cameron314's upstream
  * (namespace `moodycamel`), while an embedding host may provide its own vendored
- * copy under a different namespace (e.g. duckdb's fork is `duckdb_moodycamel`,
- * used by sirius).
+ * copy under a different namespace (e.g. duckdb's fork is `duckdb_moodycamel`).
  *
  * `CUCASCADE_MOODYCAMEL_NAMESPACE` selects the namespace and defaults to
  * `moodycamel`; the CMake build propagates it as a public compile definition so
@@ -42,6 +41,7 @@
 
 #include <blockingconcurrentqueue.h>
 #include <concurrentqueue.h>
+#include <lightweightsemaphore.h>
 
 namespace cucascade::io {
 
@@ -56,5 +56,9 @@ using concurrent_queue = detail::moodycamel_ns::ConcurrentQueue<T, Traits>;
 /// Blocking lock-free MPMC queue (alias for moodycamel::BlockingConcurrentQueue).
 template <typename T, typename Traits = detail::moodycamel_ns::ConcurrentQueueDefaultTraits>
 using blocking_concurrent_queue = detail::moodycamel_ns::BlockingConcurrentQueue<T, Traits>;
+
+/// Counting semaphore that spins briefly before sleeping (alias for
+/// moodycamel::LightweightSemaphore).
+using lightweight_semaphore = detail::moodycamel_ns::LightweightSemaphore;
 
 }  // namespace cucascade::io

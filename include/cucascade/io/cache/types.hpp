@@ -18,7 +18,7 @@
 
 #pragma once
 
-// Shared cache entry types used by both prefetching_cache and prepared IO
+// Shared cache entry types used by both fs_cache and prepared IO
 // slices. Extracted here to keep the shared request contracts independent of
 // the cache implementation.
 
@@ -38,6 +38,7 @@
 #include <memory>
 #include <optional>
 #include <span>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -57,7 +58,7 @@ namespace cucascade::io::cache {
  * `stage >= reading` (is the executor pulling these bytes itself?) and
  * `stage == disposed` (is this split finished?).  Read-ahead is not a stage
  * here -- it is producer-side work that runs alongside this progression, and
- * @c scan_info::prefetch_state tracks it separately.
+ * the embedding readahead tracks its own ticket ownership separately.
  */
 enum class scan_stage { none, initialized, queued, preparing, reading, disposed };
 
@@ -113,7 +114,15 @@ class buffer_pool {
 
   std::vector<std::byte*> allocate_bulk_from(size_t n, int numa_node);
 
+  /// Same as the span overload; leaves @p out empty.
   void deallocate_bulk(std::vector<std::byte*>&& out, int numa) noexcept;
+
+  /// Hand back chunks allocated from @p numa's arena, from a list the caller
+  /// keeps.  They go straight back to that arena's resource, settled against its
+  /// prefetch reservation.  Allocation-free, so safe on paths that cannot fail.
+  /// @p numa must name an arena: otherwise debug builds assert, and release
+  /// builds drop the blocks (never returned, counters unchanged).
+  void deallocate_bulk(std::span<std::byte* const> blocks, int numa) noexcept;
 
   [[nodiscard]] size_t chunk_size() const noexcept { return _chunk_bytes; }
 
@@ -123,6 +132,10 @@ class buffer_pool {
   }
 
   [[nodiscard]] size_t total_allocated_chunks() const noexcept { return _n_allocated_chunks; }
+
+  /// Relaxed snapshot of held bytes above each arena's prefetch reservation.
+  [[nodiscard]] std::size_t releasable_bytes(int numa) const noexcept;
+  [[nodiscard]] std::size_t releasable_bytes() const noexcept;
 
   [[nodiscard]] size_t reservation_size_for_prefetching() const noexcept;
 
@@ -144,6 +157,8 @@ class buffer_pool {
   size_t _max_allowed_budget_for_prefetching{0};
   std::unordered_map<int, size_t> _numa_to_arena_index;
   std::vector<host_arena> _host_arenas;
+  std::unique_ptr<std::atomic<std::size_t>[]> _arena_chunks;
+  std::vector<std::size_t> _arena_reserved;
   std::atomic<size_t> _n_allocated_chunks{0};
 };
 
@@ -282,7 +297,8 @@ struct chunk_fill {
 //
 // State machine — each row is the complete set of valid outbound transitions
 // for that state.  Any other transition is rejected by the corresponding
-// method's precondition (return value == false).
+// method's precondition (return value == false), with the one exception
+// marked (*) below.
 //
 //   empty      ──mark_queued()──────────►  queued
 //   queued     ──mark_allocated()───────►  allocated
@@ -292,13 +308,25 @@ struct chunk_fill {
 //   loading    ──mark_load_failed()─────►  allocated     (IO failure)
 //   cached     ──mark_evicting()────────►  evicting
 //   cached     ──acquire_read()─────────►  in_use(pin = 1)
-//   in_use     ──acquire_read()─────────►  in_use(pin += 1)
+//   in_use     ──acquire_read()─────────►  in_use(pin += 1)   (rejected at MAX_PINS)
 //   in_use     ──release_read()─────────►  in_use(pin -= 1) | cached (when pin → 0)
 //   evicting   ──mark_empty()───────────►  empty         (clears the extent)
+//   evicting   ──cancel_evicting(prior)─►  prior (*)     (allocated | cached; claim undone)
+//
+// (*) The word does not record which state the claim left, so the precondition
+// rejects only a chunk that is not `evicting` and a prior other than
+// `allocated` or `cached`.  The caller must pass the prior that this claim's
+// mark_evicting() reported; a wrong one is not rejected (a claim taken from
+// `allocated` restored as `cached` would publish an unloaded buffer as
+// readable).
 //
 // `empty` is the only state with no inbound transitions other than from
 // `evicting` — once a chunk leaves `empty`, it can only return through the
-// `evicting` reclamation path.  `evicting` is a one-way transit state.
+// `evicting` reclamation path.  `evicting` is a transit state owned by the
+// thread whose mark_evicting() claimed the chunk: it either finishes the
+// reclamation with mark_empty(), or, having found it claimed a buffer it must
+// not take, undoes the claim with cancel_evicting() back to the exact word it
+// left.  While `evicting`, only the subscriber count can change.
 //
 // The subscriber count is orthogonal to the state machine: it is incremented
 // when a request names the chunk and decremented when that request is retired,
@@ -316,6 +344,9 @@ class chunk_state {
     evicting  = 6,
   };
 
+  /// Concurrent readers one chunk can hold (the pin field is 12 bits wide).  A
+  /// reader that arrives with the field saturated is NOT pinned — see
+  /// @ref acquire_read and @ref try_pin_covering.
   static constexpr std::uint32_t MAX_PINS        = (1U << 12) - 1;
   static constexpr std::uint32_t MAX_SUBSCRIBERS = (1U << 16) - 1;
 
@@ -463,12 +494,18 @@ class chunk_state {
   }
 
   /// (cached | in_use) → in_use with pins += 1.
+  ///
+  /// Returns true only if a pin was taken, and every true must be paired with a
+  /// @ref release_read.  Returns false — taking no pin — when the chunk is not
+  /// readable OR the pin count is already at @ref MAX_PINS: a saturated chunk is
+  /// a miss, and the caller reads from the backend for itself.
   [[nodiscard]] bool acquire_read() noexcept
   {
     std::uint64_t cur = _w.load(std::memory_order_acquire);
     for (;;) {
       if (!readable(cur)) { return false; }
-      if (!pin_once(cur)) { return true; }
+      auto const attempt = pin_once(cur);
+      if (attempt != pin_attempt::retry) { return attempt == pin_attempt::pinned; }
     }
   }
 
@@ -476,6 +513,10 @@ class chunk_state {
   /// extent already covers [@p lo, @p hi).  A coverage miss costs one relaxed
   /// load and no atomic RMW — with partial fills in play that is the common
   /// case, and the pin/unpin pair it replaces was two.
+  ///
+  /// Returns true only if a pin was taken (pair it with @ref release_read).  A
+  /// chunk whose pin count is already at @ref MAX_PINS is likewise a miss: the
+  /// caller reads the bytes from the backend instead of sharing the buffer.
   [[nodiscard]] bool try_pin_covering(std::size_t chunk_off,
                                       std::size_t chunk_bytes,
                                       std::size_t lo,
@@ -485,7 +526,8 @@ class chunk_state {
     for (;;) {
       if (!readable(cur)) { return false; }
       if (!covers(decode(cur), chunk_off, chunk_bytes, lo, hi)) { return false; }
-      if (!pin_once(cur)) { return true; }
+      auto const attempt = pin_once(cur);
+      if (attempt != pin_attempt::retry) { return attempt == pin_attempt::pinned; }
     }
   }
 
@@ -514,6 +556,17 @@ class chunk_state {
   /// when nothing else can be freed — never under dispose_on_idle.
   [[nodiscard]] bool mark_evicting(bool only_unsubscribed = true) noexcept
   {
+    value prior{};
+    return mark_evicting(only_unsubscribed, prior);
+  }
+
+  /// @ref mark_evicting that also reports the state the claim left: @p prior
+  /// is set to @c allocated or @c cached on success (and left alone on
+  /// failure), so the claimant can undo the claim with @ref cancel_evicting.
+  /// It comes out of the claiming CAS: a snapshot taken before the claim may
+  /// describe an earlier tenant of the slot.
+  [[nodiscard]] bool mark_evicting(bool only_unsubscribed, value& prior) noexcept
+  {
     std::uint64_t cur = _w.load(std::memory_order_acquire);
     for (;;) {
       auto const st = static_cast<value>(cur & STATE_MASK);
@@ -523,9 +576,38 @@ class chunk_state {
       std::uint64_t const next = (cur & ~STATE_MASK) | static_cast<std::uint64_t>(evicting);
       if (_w.compare_exchange_weak(
             cur, next, std::memory_order_acq_rel, std::memory_order_acquire)) {
+        prior = st;
         return true;
       }
     }
+  }
+
+  /// evicting → @p prior, undoing a claim whose claimant must not take the
+  /// buffer after all (a NUMA-scoped reclaim that finds the claimed buffer came
+  /// from another node).  Only the thread whose @ref mark_evicting reported
+  /// @p prior may call it, and only instead of @ref mark_empty.
+  ///
+  /// The restore is exact.  While a chunk is `evicting`, nothing but
+  /// @ref add_subscriber and @ref drop_subscriber can change its word: a pin
+  /// needs `cached` or `in_use`; the extent changes only in `empty`, `queued`
+  /// and `allocated` (@ref merge_fill, @ref take_loading_merging) and on the
+  /// claimant's own @ref mark_empty; and every other transition starts from
+  /// another state.  So the pins are still the zero the claim required, the
+  /// extent is the one the claim saw, and the CAS keeps the subscriber count as
+  /// it is now, counting requests that named or released the chunk meanwhile.
+  ///
+  /// @p prior cannot be verified: the word no longer records the state the
+  /// claim left.  It must be the value this claim's @ref mark_evicting
+  /// reported.  A wrong one is not refused: restoring a claim taken from
+  /// `allocated` as `cached` would publish a buffer that was never loaded as
+  /// readable.
+  ///
+  /// Returns false, changing nothing, only when the chunk is not `evicting` or
+  /// @p prior is neither @c allocated nor @c cached.
+  [[nodiscard]] bool cancel_evicting(value prior) noexcept
+  {
+    if (prior != allocated && prior != cached) { return false; }
+    return transition(evicting, prior);
   }
 
   /// evicting → empty, clearing the populated extent in the same CAS so a
@@ -598,17 +680,26 @@ class chunk_state {
     return st == cached || st == in_use;
   }
 
-  /// One attempt at (cached | in_use) → in_use, pins += 1.  Returns false when
-  /// the CAS succeeded (or the pin count is saturated, which cannot be retried);
-  /// true means @p cur was refreshed and the caller must re-check its guards.
-  bool pin_once(std::uint64_t& cur) noexcept
+  /// Outcome of one @ref pin_once attempt.
+  enum class pin_attempt : std::uint8_t {
+    pinned,     ///< the CAS succeeded: a pin was taken
+    retry,      ///< the CAS lost a race: @c cur was refreshed, re-check the guards
+    saturated,  ///< the pin count is at @ref MAX_PINS: no pin can be taken, do not retry
+  };
+
+  /// One attempt at (cached | in_use) → in_use, pins += 1.  The caller has
+  /// already established that @p cur is readable.  A saturated pin field is
+  /// reported as @c saturated, never as @c pinned: the caller must treat it as
+  /// "not pinned" so the pin/release pairing stays balanced.
+  pin_attempt pin_once(std::uint64_t& cur) noexcept
   {
     auto const pins = (cur & PIN_MASK) >> PIN_SHIFT;
-    if (pins >= MAX_PINS) { return false; }
+    if (pins >= MAX_PINS) { return pin_attempt::saturated; }
     std::uint64_t const next = (cur & ~(STATE_MASK | PIN_MASK)) |
                                static_cast<std::uint64_t>(in_use) | ((pins + 1) << PIN_SHIFT);
-    return !_w.compare_exchange_weak(
-      cur, next, std::memory_order_acq_rel, std::memory_order_acquire);
+    return _w.compare_exchange_weak(cur, next, std::memory_order_acq_rel, std::memory_order_acquire)
+             ? pin_attempt::pinned
+             : pin_attempt::retry;
   }
 
   /// Exact-precondition transition: requires state == @p from AND no reader
@@ -890,8 +981,10 @@ class consumer_stage {
 // in a file are almost always walked by the same thread (the request that
 // covers that range), so packing them two-per-half-line quarters the lines a
 // range sweep touches; padding each chunk out to 64 bytes would defend against
-// a contention pattern this workload does not produce.  All cross-thread state
-// is in the single word, so there is nothing else to isolate.
+// a contention pattern this workload does not produce.  All cross-thread
+// ordering goes through the single word (the other fields are written only by
+// the thread that owns the chunk's current state), so there is nothing else to
+// isolate.
 
 struct cached_chunk {
   cached_chunk() noexcept = default;
@@ -900,10 +993,29 @@ struct cached_chunk {
   chunk_state state;
   std::size_t offset{0};
   std::uint8_t* data{nullptr};
-  std::int32_t numa_node{-1};
+  /// NUMA node of the arena that supplied @ref data.  Stored while the chunk is
+  /// `queued`, before @c mark_allocated publishes the buffer, and read by
+  /// whoever claims the chunk afterwards: relaxed, because the state word's
+  /// release/acquire orders it.  Atomic because a NUMA-scoped reclaim also
+  /// reads it before claiming, racing a preparation that refills the slot; that
+  /// read is only a hint, and only a read after a successful claim names the
+  /// node of the buffer taken.  Not reset when the buffer is reclaimed.
+  std::atomic<std::int32_t> numa_node{-1};
 };
 
+static_assert(std::atomic<std::int32_t>::is_always_lock_free,
+              "cached_chunk::numa_node must be a plain lock-free word");
 static_assert(sizeof(cached_chunk) == 32, "cached_chunk should stay 4 per cache line");
+
+/// Settle the chunks one physical segment of a cache fill covered: @c cached when
+/// its host leg succeeded, @c load_failed otherwise.  Chunks of other segments
+/// are untouched.  The completion callback of every fs_cache fill.
+inline void publish_chunk_fill(std::span<cached_chunk* const> completed, bool host_ok) noexcept
+{
+  for (auto* chunk : completed) {
+    std::ignore = host_ok ? chunk->state.mark_cached() : chunk->state.mark_load_failed();
+  }
+}
 
 // ---------------------------------------------------------------------------
 // chunk_arena — append-only, pointer-stable storage for cached_chunk

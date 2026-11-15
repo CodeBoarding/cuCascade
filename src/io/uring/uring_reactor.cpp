@@ -16,11 +16,16 @@
  * limitations under the License.
  */
 
+#include "io/detail/local_descriptor.hpp"
+
 #include <cucascade/cuda/event.hpp>
 #include <cucascade/exec/thread_util.hpp>
 #include <cucascade/io/cache/types.hpp>
 #include <cucascade/io/details/slot_pool.hpp>
+#include <cucascade/io/io_errors.hpp>
 #include <cucascade/io/io_request.hpp>
+#include <cucascade/io/io_utils.hpp>
+#include <cucascade/io/object_identity.hpp>
 #include <cucascade/io/types.hpp>
 #include <cucascade/io/uring/types.hpp>
 #include <cucascade/io/uring/uring_reactor.hpp>
@@ -35,6 +40,7 @@
 
 #include <algorithm>
 #include <array>
+#include <bit>
 #include <cassert>
 #include <cerrno>
 #include <chrono>
@@ -68,24 +74,18 @@ constexpr std::chrono::milliseconds POLL_INTERVAL{20};
 constexpr auto POLL_INTERVAL_US =
   std::chrono::duration_cast<std::chrono::microseconds>(POLL_INTERVAL).count();
 
-[[nodiscard]] constexpr std::size_t saturating_add(std::size_t lhs, std::size_t rhs) noexcept
-{
-  return rhs > std::numeric_limits<std::size_t>::max() - lhs
-           ? std::numeric_limits<std::size_t>::max()
-           : lhs + rhs;
-}
+using io_utils::align_down;
+using io_utils::align_up;
+using io_utils::saturating_add;
 
-[[nodiscard]] constexpr std::size_t align_down(std::size_t value, std::size_t alignment) noexcept
-{
-  return alignment == 0 ? value : value - value % alignment;
-}
+static_assert(max_slices_per_pass == MAX_NUM_SLOTS,
+              "max_slices_per_pass must match the reactor's slot cap");
 
-[[nodiscard]] constexpr std::size_t align_up(std::size_t value, std::size_t alignment) noexcept
+/// Per-pass expansion cap for @p configured (see config::slices_per_pass): 0 lifts
+/// the cap, leaving the free staging slots as the only bound.
+[[nodiscard]] constexpr std::size_t effective_slices_per_pass(std::size_t configured) noexcept
 {
-  if (alignment == 0) return value;
-  auto const remainder = value % alignment;
-  if (remainder == 0) return value;
-  return saturating_add(value, alignment - remainder);
+  return configured == 0 ? std::numeric_limits<std::size_t>::max() : configured;
 }
 
 [[nodiscard]] constexpr bool is_fixed_buffer_error(int errc) noexcept
@@ -463,11 +463,63 @@ uring_reactor::uring_reactor(std::shared_ptr<reactor_context> ctx, std::string_v
   if (_ctx->host_memory_resource() == nullptr) {
     throw std::invalid_argument("uring_reactor: host memory resource must be non-null");
   }
-  _config           = _ctx->cfg();
-  _bounce_slot_size = _ctx->host_memory_resource()->get_block_size();
+  _config              = _ctx->cfg();
+  _bounce_slot_size    = _ctx->host_memory_resource()->get_block_size();
+  _slices_per_pass     = effective_slices_per_pass(_config.slices_per_pass);
+  _low_service_quantum = std::min(_slices_per_pass, max_slices_per_pass);
 }
 
 uring_reactor::~uring_reactor() { shutdown(); }
+
+uring_reactor::gauges uring_reactor::take_gauges() noexcept
+{
+  gauges out;
+  out.inflight_ops = _gauge_inflight.load(std::memory_order_relaxed);
+  // The worker raises the max with a plain load/store, so a reset racing it can
+  // lose one pass's peak; the window is diagnostic, not an exact accounting.
+  out.max_inflight_ops =
+    std::max(_gauge_max_inflight.exchange(0, std::memory_order_relaxed), out.inflight_ops);
+  out.pending_ops             = _gauge_pending.load(std::memory_order_relaxed);
+  out.active_remaining_slices = _gauge_active_slices.load(std::memory_order_relaxed);
+  out.queued_requests         = _requests.size_approx();
+  out.queued_low_requests     = _requests.size_approx(io_priority::low);
+  out.queued_bytes            = _queued_bytes.load(std::memory_order_relaxed);
+  out.requests_started        = _gauge_requests_started.load(std::memory_order_relaxed);
+  out.bytes_submitted         = _gauge_bytes_submitted.load(std::memory_order_relaxed);
+  out.preemptions             = _gauge_preemptions.load(std::memory_order_relaxed);
+  out.low_service_grants      = _gauge_low_service_grants.load(std::memory_order_relaxed);
+  auto const drain            = [](queue_delay_atomics& src, queue_delay_stats& dst) noexcept {
+    dst.count  = src.count.exchange(0, std::memory_order_relaxed);
+    dst.sum_ns = src.sum_ns.exchange(0, std::memory_order_relaxed);
+    dst.max_ns = src.max_ns.exchange(0, std::memory_order_relaxed);
+    for (std::size_t b = 0; b < queue_delay_buckets; ++b) {
+      dst.histogram[b] = src.histogram[b].exchange(0, std::memory_order_relaxed);
+    }
+  };
+  drain(_gauge_queue_delay_high, out.queue_delay_high);
+  drain(_gauge_queue_delay_low, out.queue_delay_low);
+  return out;
+}
+
+void uring_reactor::record_queue_delay(grouped_io_request const& request) noexcept
+{
+  if (request.enqueued_at == std::chrono::steady_clock::time_point{}) return;
+  auto const ns          = static_cast<std::uint64_t>(std::max<std::int64_t>(
+    0,
+    std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() -
+                                                         request.enqueued_at)
+      .count()));
+  constexpr auto relaxed = std::memory_order_relaxed;
+  auto& dst =
+    request.priority == io_priority::low ? _gauge_queue_delay_low : _gauge_queue_delay_high;
+  dst.count.fetch_add(1, relaxed);
+  dst.sum_ns.fetch_add(ns, relaxed);
+  // Only the worker raises the max; a racing take_gauges() reset can lose one sample's peak.
+  if (ns > dst.max_ns.load(relaxed)) dst.max_ns.store(ns, relaxed);
+  auto const bucket = std::min<std::size_t>(static_cast<std::size_t>(std::bit_width(ns / 1000)),
+                                            queue_delay_buckets - 1);
+  dst.histogram[bucket].fetch_add(1, relaxed);
+}
 
 void uring_reactor::start()
 {
@@ -534,7 +586,8 @@ void uring_reactor::enqueue(std::unique_ptr<grouped_io_request> request) noexcep
 {
   if (request == nullptr) return;
 
-  auto const bytes = request->remaining_bytes();
+  auto const bytes     = request->remaining_bytes();
+  request->enqueued_at = std::chrono::steady_clock::now();
 
   bool enqueued = false;
   grouped_coordinator::error_type error{canceled_error()};
@@ -543,7 +596,8 @@ void uring_reactor::enqueue(std::unique_ptr<grouped_io_request> request) noexcep
     if (_accepting.load(std::memory_order_acquire)) {
       _queued_bytes.fetch_add(bytes, std::memory_order_relaxed);
       try {
-        enqueued = _requests.enqueue(std::move(request));
+        auto const priority = request->priority;
+        enqueued            = _requests.enqueue(std::move(request), priority);
         if (!enqueued) { error = std::make_error_code(std::errc::no_buffer_space); }
       } catch (...) {
         enqueued = false;
@@ -569,22 +623,46 @@ std::unique_ptr<local_io_object> uring_reactor::create_io_object(std::string pat
     throw std::runtime_error("uring_reactor::create_io_object: unsupported path: " + path);
   }
 
-  file_descriptor buffered{::open(path.c_str(), O_RDONLY)};
-  if (!buffered) {
-    throw std::system_error(
-      errno, std::generic_category(), "uring_reactor::create_io_object: buffered open");
-  }
+  for (int attempt = 0; attempt < 2; ++attempt) {
+    file_descriptor buffered{::open(path.c_str(), O_RDONLY)};
+    if (!buffered) {
+      int const error = errno;
+      throw std::system_error(
+        error, std::generic_category(), "uring_reactor::create_io_object: buffered open");
+    }
 
-  file_descriptor direct{::open(path.c_str(), O_RDONLY | O_DIRECT)};
-  if (!direct) {
-    CUCASCADE_LOG_WARN("uring_reactor: O_DIRECT unavailable for '{}': {}; using buffered I/O",
-                       path,
-                       strerror(errno));
-  }
+    // Reopen the owned descriptor, not the pathname: a concurrent rename must
+    // not pair the old buffered footer with a different O_DIRECT data file.
+    file_descriptor direct{cucascade::io::detail::reopen_local_descriptor(
+      buffered.get(), path.c_str(), O_RDONLY | O_DIRECT)};
+    if (!direct) {
+      CUCASCADE_LOG_WARN("uring_reactor: O_DIRECT unavailable for '{}': {}; using buffered I/O",
+                         path,
+                         strerror(errno));
+    }
 
-  auto const file_size = size(buffered.get());
-  return std::make_unique<local_io_object>(
-    std::move(path), std::move(buffered), std::move(direct), file_size);
+    object_identity captured;
+    if (!capture_local_identity(buffered.get(), captured)) {
+      int const error = errno;
+      throw std::system_error(
+        error, std::generic_category(), "uring_reactor::create_io_object: fstat");
+    }
+    if (direct) {
+      object_identity direct_identity;
+      if (!capture_local_identity(direct.get(), direct_identity)) {
+        throw descriptor_mismatch_error(
+          "uring_reactor::create_io_object: identity_descriptor_mismatch");
+      }
+      if (captured.device != direct_identity.device || captured.inode != direct_identity.inode) {
+        // Destroy the entire descriptor set before retrying the open.
+        continue;
+      }
+    }
+    auto const file_size = captured.size;
+    return std::make_unique<local_io_object>(
+      std::move(path), std::move(buffered), std::move(direct), file_size, "", std::move(captured));
+  }
+  throw descriptor_mismatch_error("uring_reactor::create_io_object: identity_descriptor_mismatch");
 }
 
 std::size_t uring_reactor::size(int native_handle)
@@ -636,45 +714,7 @@ std::vector<byte_range> uring_reactor::align_and_coalesce(
 {
   try {
     auto const requested = alignment.value_or(IO_BLOCK_SIZE);
-    auto const effective = std::max<std::size_t>(requested, IO_BLOCK_SIZE);
-
-    std::vector<byte_range> aligned;
-    aligned.reserve(ranges.size());
-    for (auto const& input : ranges) {
-      if (input.offset() < 0 || input.size() <= 0) continue;
-      auto const offset = static_cast<std::size_t>(input.offset());
-      auto const end =
-        align_up(saturating_add(offset, static_cast<std::size_t>(input.size())), effective);
-      auto const begin = align_down(offset, effective);
-      aligned.emplace_back(static_cast<std::int64_t>(begin),
-                           static_cast<std::int64_t>(end - begin));
-    }
-
-    std::sort(aligned.begin(), aligned.end(), [](auto const& lhs, auto const& rhs) {
-      return lhs.offset() < rhs.offset();
-    });
-
-    std::vector<byte_range> merged;
-    merged.reserve(aligned.size());
-    for (auto const& input : aligned) {
-      if (merged.empty()) {
-        merged.push_back(input);
-        continue;
-      }
-      auto& previous            = merged.back();
-      auto const previous_begin = static_cast<std::size_t>(previous.offset());
-      auto const previous_end =
-        saturating_add(previous_begin, static_cast<std::size_t>(previous.size()));
-      auto const input_begin = static_cast<std::size_t>(input.offset());
-      auto const input_end   = saturating_add(input_begin, static_cast<std::size_t>(input.size()));
-      if (input_begin <= previous_end) {
-        previous = {previous.offset(),
-                    static_cast<std::int64_t>(std::max(previous_end, input_end) - previous_begin)};
-      } else {
-        merged.push_back(input);
-      }
-    }
-    return merged;
+    return io_utils::align_and_coalesce(ranges, std::max<std::size_t>(requested, IO_BLOCK_SIZE));
   } catch (...) {
     return {};
   }
@@ -718,7 +758,119 @@ void uring_reactor::worker_loop(std::stop_token const& stop_token)
     copying.reserve(slot_count);
     std::vector<std::unique_ptr<uring_io_op>> pending;
     std::unique_ptr<grouped_io_request> active;
+    // A low-priority request set aside, part-expanded, while high requests run.
+    // Holds at most one: only a low active request is parked, and it is resumed
+    // before any further low request is taken.
+    std::unique_ptr<grouped_io_request> parked;
     std::size_t inflight = 0;
+    // Whether the next pass may expand the active request (config::slices_per_pass).  Set
+    // by progress -- a read completion reaped, a device copy finished, a request made
+    // active -- and cleared when the worker blocks on the ring.  The ring wait times out
+    // every POLL_INTERVAL so the worker can observe stop requests and cancellation; such a
+    // wakeup completed nothing and must not count as a pass, or a read slower than
+    // POLL_INTERVAL lets the request add one cap of reads per timeout, unbounded by
+    // slices_per_pass.
+    bool may_expand = true;
+    // Bounded low service (config::low_service_interval): high requests started
+    // while low work waited since the low tier was last served, and how many
+    // slices the active request -- when it was granted a turn -- may still
+    // expand before preempt_low can park it again.
+    std::size_t const low_service_interval = _config.low_service_interval;
+    std::size_t high_starts_over_low       = 0;
+    std::size_t granted_slices_left        = 0;
+    // Gauge accumulators: worker-local, published by publish_gauges().
+    std::uint64_t requests_started   = 0;
+    std::uint64_t bytes_submitted    = 0;
+    std::uint64_t preemptions        = 0;
+    std::uint64_t low_service_grants = 0;
+
+    auto publish_gauges = [&]() noexcept {
+      constexpr auto relaxed = std::memory_order_relaxed;
+      auto const depth       = static_cast<std::uint32_t>(inflight);
+      _gauge_inflight.store(depth, relaxed);
+      if (depth > _gauge_max_inflight.load(relaxed)) { _gauge_max_inflight.store(depth, relaxed); }
+      _gauge_pending.store(static_cast<std::uint32_t>(pending.size()), relaxed);
+      _gauge_active_slices.store(
+        active != nullptr ? static_cast<std::uint32_t>(active->remaining_slices()) : 0U, relaxed);
+      _gauge_requests_started.store(requests_started, relaxed);
+      _gauge_bytes_submitted.store(bytes_submitted, relaxed);
+      _gauge_preemptions.store(preemptions, relaxed);
+      _gauge_low_service_grants.store(low_service_grants, relaxed);
+    };
+
+    auto low_waiting = [&]() noexcept {
+      return parked != nullptr || _requests.size_approx(io_priority::low) != 0;
+    };
+
+    // Make @p next the active request and keep the bounded-service books: a
+    // low request becoming active means the low tier was served, a high one
+    // starting while low work waits counts towards the next grant.  Only a
+    // grant (see take_next) leaves the new request a protected quantum.
+    auto activate = [&](std::unique_ptr<grouped_io_request> next, bool fresh) {
+      granted_slices_left = 0;
+      if (next->priority == io_priority::low) {
+        high_starts_over_low = 0;
+      } else if (low_waiting()) {
+        ++high_starts_over_low;
+      }
+      active     = std::move(next);
+      may_expand = true;
+      if (fresh) ++requests_started;
+    };
+
+    // Bounded service: once low_service_interval high requests have started
+    // while low work waited, give the low tier one turn even if high work is
+    // waiting -- the parked request if there is one, else the next queued low
+    // request -- and protect it from preempt_low for one quantum.
+    auto grant_low_service = [&]() -> bool {
+      if (low_service_interval == 0 || high_starts_over_low < low_service_interval) return false;
+      std::unique_ptr<grouped_io_request> next;
+      bool fresh = false;
+      if (parked != nullptr) {
+        next = std::move(parked);
+      } else if (_requests.try_dequeue_low(next) && next != nullptr) {
+        fresh = true;
+      } else {
+        // Nothing low is actually waiting any more: nothing to grant.
+        high_starts_over_low = 0;
+        return false;
+      }
+      activate(std::move(next), fresh);
+      granted_slices_left = _low_service_quantum;
+      ++low_service_grants;
+      return true;
+    };
+
+    // Make the next request active without blocking: a low-service grant when
+    // one is due, else a waiting high request, then the parked low one, then
+    // anything queued.
+    auto take_next = [&]() -> bool {
+      if (grant_low_service()) return true;
+      std::unique_ptr<grouped_io_request> next;
+      if (parked != nullptr) {
+        if (!_requests.try_dequeue_high(next) || next == nullptr) {
+          activate(std::move(parked), false);
+          return true;
+        }
+      } else if (!_requests.try_dequeue(next) || next == nullptr) {
+        return false;
+      }
+      activate(std::move(next), true);
+      return true;
+    };
+
+    // Park an active low request at this slice boundary when a high one waits,
+    // unless the request is still inside the quantum a low-service grant gave it.
+    auto preempt_low = [&]() {
+      if (active == nullptr || parked != nullptr || active->priority != io_priority::low ||
+          granted_slices_left != 0)
+        return;
+      std::unique_ptr<grouped_io_request> next;
+      if (!_requests.try_dequeue_high(next) || next == nullptr) return;
+      parked = std::move(active);
+      activate(std::move(next), true);
+      ++preemptions;
+    };
 
     auto reset_slot = [&](io_slot& slot) noexcept { slot.reset(); };
 
@@ -781,6 +933,7 @@ void uring_reactor::worker_loop(std::stop_token const& stop_token)
           *output++ = *it;
           continue;
         }
+        may_expand = true;
         if (status == cudaSuccess) {
           slot.op->request.finish_success();
           reset_slot(slot);
@@ -814,6 +967,7 @@ void uring_reactor::worker_loop(std::stop_token const& stop_token)
 
         auto const index = static_cast<int>(user_data);
         if (inflight != 0) --inflight;
+        may_expand = true;
 
         if (index < 0 || static_cast<std::size_t>(index) >= slots.size()) continue;
         auto& slot = slots[static_cast<std::size_t>(index)];
@@ -906,9 +1060,20 @@ void uring_reactor::worker_loop(std::stop_token const& stop_token)
       submit_slots(submitted);
     };
 
+    // Slots whose SQE dispatch_pending() prepared but nobody has submitted yet.  Every
+    // entry owns a distinct slot, so the batch never exceeds slot_count and always fits
+    // the 2 x slot_count SQ.  It must be empty again before the worker waits: a timed
+    // wait may flush the SQ itself, publishing reads `inflight` does not count.
+    std::vector<int> prepared;
+    prepared.reserve(slot_count);
+    auto submit_prepared = [&]() {
+      if (prepared.empty()) return;
+      auto const count = prepared.size();
+      prepared.clear();
+      ring.submit(count, inflight);
+    };
+
     auto dispatch_pending = [&]() {
-      std::vector<int> submitted;
-      submitted.reserve(slot_count);
       while (!pending.empty()) {
         auto& candidate = pending.back();
         if (!candidate->request.coordinator->should_continue()) {
@@ -962,7 +1127,8 @@ void uring_reactor::worker_loop(std::stop_token const& stop_token)
             break;
           }
           slot.prepare_sqe(sqe);
-          submitted.push_back(leader);
+          prepared.push_back(leader);
+          bytes_submitted += slot.op->request.io_rng.size;
         } catch (...) {
           if (slots[static_cast<std::size_t>(leader)].op != nullptr) {
             settle_slot_error(slots[static_cast<std::size_t>(leader)], std::current_exception());
@@ -971,7 +1137,6 @@ void uring_reactor::worker_loop(std::stop_token const& stop_token)
           }
         }
       }
-      submit_slots(submitted);
     };
 
     auto cancel_pending = [&](grouped_coordinator::error_type const& error) noexcept {
@@ -981,12 +1146,16 @@ void uring_reactor::worker_loop(std::stop_token const& stop_token)
       }
     };
 
-    auto cancel_active = [&](grouped_coordinator::error_type const& error) noexcept {
-      if (active == nullptr) return;
-      auto const bytes = active->remaining_bytes();
+    auto cancel_request = [&](std::unique_ptr<grouped_io_request>& request,
+                              grouped_coordinator::error_type const& error) noexcept {
+      if (request == nullptr) return;
+      auto const bytes = request->remaining_bytes();
       _queued_bytes.fetch_sub(bytes, std::memory_order_relaxed);
-      active->cancel_remaining(error);
-      active.reset();
+      request->cancel_remaining(error);
+      request.reset();
+    };
+    auto cancel_active = [&](grouped_coordinator::error_type const& error) noexcept {
+      cancel_request(active, error);
     };
 
     std::exception_ptr fatal_error;
@@ -997,19 +1166,51 @@ void uring_reactor::worker_loop(std::stop_token const& stop_token)
         resubmit_incomplete();
 
         if (!pending.empty() && !pending.back()->request.coordinator->should_continue()) {
+          // Pending ops all come from one slice, so share one coordinator; that
+          // request may be the active one or, after a preemption, the parked one.
+          auto const cancelled = pending.back()->request.coordinator;
           cancel_pending(canceled_error());
-          cancel_active(canceled_error());
+          if (active != nullptr && active->coordinator == cancelled)
+            cancel_active(canceled_error());
+          if (parked != nullptr && parked->coordinator == cancelled) {
+            cancel_request(parked, canceled_error());
+          }
+        }
+        // A parked request with no ops in flight would otherwise only notice its
+        // coordinator stopped (another split failed, or the caller cancelled) once
+        // resumed, holding its credits and future until then.
+        if (parked != nullptr && !parked->coordinator->should_continue()) {
+          cancel_request(parked, canceled_error());
         }
 
         dispatch_pending();
+        submit_prepared();
 
-        if (pending.empty() && active != nullptr) {
+        preempt_low();
+
+        // Expand up to _slices_per_pass slices of the active request (config::
+        // slices_per_pass), so one many-slice request can fill the free slots instead of
+        // adding one read per completion wait.  The first expansion is unconditional, as
+        // it always was; each further one needs every read planned so far to have found a
+        // slot and a slot still free, which bounds the pass by the slot count.  The batch
+        // goes to the kernel in one submit once the pass stops expanding.  A pass that
+        // follows a wakeup with no progress expands nothing (see may_expand), but still
+        // settles an active request whose coordinator stopped.
+        if (!may_expand && active != nullptr && !active->coordinator->should_continue()) {
+          cancel_active(canceled_error());
+        }
+        for (std::size_t expanded = 0;
+             may_expand && expanded < _slices_per_pass && pending.empty() && active != nullptr &&
+             (expanded == 0 || available_slots.approx_free() > 0);
+             ++expanded) {
           if (!active->coordinator->should_continue()) {
             cancel_active(canceled_error());
           } else if (!active->empty()) {
+            if (active->not_started()) record_queue_delay(*active);
             auto const backlog =
               std::max(_queued_bytes.load(std::memory_order_relaxed), active->remaining_bytes());
             auto slice = active->take_front();
+            if (granted_slices_left != 0) --granted_slices_left;
             _queued_bytes.fetch_sub(slice.size(), std::memory_order_relaxed);
 
             try {
@@ -1043,17 +1244,13 @@ void uring_reactor::worker_loop(std::stop_token const& stop_token)
             active.reset();
           }
         }
+        submit_prepared();
 
-        if (active == nullptr && pending.empty()) {
-          std::unique_ptr<grouped_io_request> next;
-          if (_requests.try_dequeue(next)) {
-            if (next == nullptr) break;
-            active = std::move(next);
-            continue;
-          }
-        }
+        if (active == nullptr && pending.empty() && take_next()) continue;
 
+        publish_gauges();
         if (inflight != 0) {
+          may_expand = false;
           if (auto const error = ring.wait_for(POLL_INTERVAL); error != 0) {
             throw std::system_error(std::error_code{error, std::generic_category()},
                                     "uring_reactor: io_uring_wait_cqe_timeout");
@@ -1064,6 +1261,7 @@ void uring_reactor::worker_loop(std::stop_token const& stop_token)
           copying.pop_back();
           auto& slot        = slots[static_cast<std::size_t>(index)];
           auto const status = slot.copy_event->synchronize_no_throw();
+          may_expand        = true;
           if (status == cudaSuccess) {
             slot.op->request.finish_success();
             reset_slot(slot);
@@ -1075,7 +1273,7 @@ void uring_reactor::worker_loop(std::stop_token const& stop_token)
           std::unique_ptr<grouped_io_request> next;
           if (!_requests.wait_dequeue_timed(next, POLL_INTERVAL_US)) continue;
           if (next == nullptr) break;
-          active = std::move(next);
+          activate(std::move(next), true);
         }
       }
     } catch (...) {
@@ -1096,6 +1294,7 @@ void uring_reactor::worker_loop(std::stop_token const& stop_token)
                              : grouped_coordinator::error_type{cancellation};
     cancel_pending(terminal_error);
     cancel_active(terminal_error);
+    cancel_request(parked, terminal_error);
     cancel_queued(terminal_error);
 
     bool sync_cancel_available = true;

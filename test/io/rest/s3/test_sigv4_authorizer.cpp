@@ -149,7 +149,8 @@ TEST_CASE("ListObjectsV2 parser extracts ordered keys, sizes, and pagination", "
     R"(<?xml version="1.0" encoding="UTF-8"?>)"
     R"(<ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/">)"
     R"(<Name>bucket</Name><Prefix>lake/</Prefix>)"
-    R"(<Contents><Key>lake/a&amp;b.parquet</Key><Size>12</Size></Contents>)"
+    R"(<Contents><Key>lake/a&amp;b.parquet</Key><Size>12</Size>)"
+    R"(<ETag>&quot;9b2cf535f27731c974343645a3985328&quot;</ETag></Contents>)"
     R"(<Contents><Key>lake/year=2024/file.parquet</Key><Size>0</Size></Contents>)"
     R"(<IsTruncated>true</IsTruncated>)"
     R"(<NextContinuationToken>token/with+chars=</NextContinuationToken>)"
@@ -158,8 +159,10 @@ TEST_CASE("ListObjectsV2 parser extracts ordered keys, sizes, and pagination", "
   REQUIRE(page.entries.size() == 2);
   CHECK(page.entries[0].key == "lake/a&b.parquet");
   CHECK(page.entries[0].size == 12);
+  CHECK(page.entries[0].etag == "\"9b2cf535f27731c974343645a3985328\"");
   CHECK(page.entries[1].key == "lake/year=2024/file.parquet");
   CHECK(page.entries[1].size == 0);
+  CHECK(page.entries[1].etag.empty());
   CHECK(page.is_truncated);
   CHECK(page.next_continuation_token == "token/with+chars=");
 }
@@ -464,6 +467,39 @@ TEST_CASE("sigv4_presigned_authorizer preserves HTTP endpoint ports", "[s3][auth
   CHECK(is_lower_hex_64(query_value(url, "X-Amz-Signature")));
 }
 
+TEST_CASE("SigV4 authorizers drop the scheme's default endpoint port", "[s3][authorizer]")
+{
+  // The transport sends the URL authority without a default port, so the signed host must not
+  // carry one either; any other port stays.
+  struct endpoint_case {
+    char const* endpoint;
+    char const* host;
+  };
+  for (auto const [endpoint, host] :
+       {endpoint_case{"https://store.example:443", "store.example"},
+        endpoint_case{"http://store.example:80", "store.example"},
+        endpoint_case{"HTTPS://[::1]:443", "[::1]"},
+        endpoint_case{"http://store.example:443", "store.example:443"},
+        endpoint_case{"https://store.example:80", "store.example:80"},
+        endpoint_case{"https://store.example:4430", "store.example:4430"}}) {
+    INFO(endpoint);
+    std::string const scheme = std::string(endpoint).starts_with("http:") ? "http" : "https";
+    sigv4_presigned_authorizer presigned(example_static_credentials(), "us-east-1", endpoint);
+    auto const url =
+      presigned.authorize({"bucket", "key"}, request_method::GET, k_presign_timeout).url;
+    CHECK(starts_with(url, scheme + "://" + host + "/bucket/key?"));
+
+    sigv4_header_authorizer header(example_static_credentials(), "us-east-1", endpoint);
+    auto const req = header.authorize({"bucket", "key"}, request_method::GET, k_presign_timeout);
+    CHECK(req.url == scheme + "://" + host + "/bucket/key");
+    std::string signed_host;
+    for (auto const& [name, value] : req.headers) {
+      if (name == "Host") { signed_host = value; }
+    }
+    CHECK(signed_host == host);
+  }
+}
+
 TEST_CASE("sigv4_presigned_authorizer rejects malformed construction inputs", "[s3][authorizer]")
 {
   auto creds = example_static_credentials();
@@ -494,6 +530,36 @@ TEST_CASE("sigv4_presigned_authorizer rejects malformed construction inputs", "[
   CHECK_THROWS_AS(
     sigv4_presigned_authorizer(creds, "us-east-1", "https://example.com", std::chrono::seconds{0}),
     credential_error);
+}
+
+TEST_CASE("SigV4 authorizers reject an endpoint without a host or with user-info",
+          "[s3][authorizer]")
+{
+  // Both signing modes parse the endpoint at construction: a port-only
+  // authority has no host, and user-info is not part of a service endpoint.
+  using Catch::Matchers::ContainsSubstring;
+  using Catch::Matchers::MessageMatches;
+  auto const creds = example_static_credentials();
+  struct rejected {
+    char const* endpoint;
+    char const* reason;
+  };
+  for (auto const& [endpoint, reason] :
+       {rejected{"http://:9000", "endpoint missing host"},
+        rejected{"https://user@storage.example", "endpoint must not contain user-info"}}) {
+    CAPTURE(endpoint);
+    CHECK_THROWS_MATCHES(sigv4_presigned_authorizer(creds, "us-east-1", endpoint),
+                         credential_error,
+                         MessageMatches(ContainsSubstring(reason)));
+    CHECK_THROWS_MATCHES(sigv4_header_authorizer(creds, "us-east-1", endpoint),
+                         credential_error,
+                         MessageMatches(ContainsSubstring(reason)));
+  }
+  for (auto const* endpoint : {"http://storage.example", "http://storage.example:9000"}) {
+    CAPTURE(endpoint);
+    CHECK_NOTHROW(sigv4_presigned_authorizer(creds, "us-east-1", endpoint));
+    CHECK_NOTHROW(sigv4_header_authorizer(creds, "us-east-1", endpoint));
+  }
 }
 
 TEST_CASE("sigv4_header_authorizer signs with headers and plain path-style URLs",

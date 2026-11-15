@@ -20,6 +20,7 @@
 
 #include <cucascade/exec/invocable.hpp>
 #include <cucascade/io/byte_range.hpp>
+#include <cucascade/io/object_identity.hpp>
 
 #include <cuda/stream>
 #include <cuda_runtime.h>
@@ -41,7 +42,7 @@
 #include <vector>
 
 namespace cucascade::io::cache {
-class cached_chunk;
+struct cached_chunk;
 }
 
 namespace cucascade::io {
@@ -83,8 +84,8 @@ struct file_descriptor {
 
 /**
  * @brief Abstract per-file handle.  A passive bag of native handles
- * produced by a backend reactor (e.g. file descriptors, CURL easy
- * handles, S3 client state).  Performs no I/O of its own.
+ * produced by a backend reactor (e.g. file descriptors, an S3 object's
+ * bucket, key and validator).  Performs no I/O of its own.
  *
  * Inherits from @c std::enable_shared_from_this so the prefetching cache can
  * take a reference to an io_object and safely extend its lifetime via
@@ -95,9 +96,40 @@ class io_object : public std::enable_shared_from_this<io_object> {
  public:
   virtual ~io_object() = default;
 
-  /// Stable identifier used as the prefetching-cache key.  Often equal to
-  /// @c object_path() but may differ for backends that need to distinguish
-  /// otherwise-equal paths (versioned S3 keys, normalized URLs, …).
+  /// This open's process-wide order (see @ref next_open_generation): a later
+  /// open of a path has a larger generation than an earlier one.
+  [[nodiscard]] std::uint64_t open_generation() const noexcept { return _open_generation; }
+
+  /// The evidence that another open of this path sees the same version of the
+  /// object.  A backend overrides it with what it can prove (a local file's
+  /// stat tuple, a remote object's strong validator).  The default uses
+  /// @ref validation_tag as an @c object_tag only when the backend declares it
+  /// strong via @ref validation_tag_is_strong. Otherwise the identity is
+  /// scoped to this open (@c opened_handle, versioned by @ref open_generation),
+  /// never to the path.
+  [[nodiscard]] virtual object_identity identity() const
+  {
+    object_identity result;
+    auto const tag      = validation_tag();
+    bool const reusable = !tag.empty() && validation_tag_is_strong();
+    result.kind         = reusable ? identity_kind::object_tag : identity_kind::opened_handle;
+    result.size         = size();
+    result.version      = reusable ? std::string(tag) : std::to_string(_open_generation);
+    return result;
+  }
+
+  /// The key of this object's version: @ref identity framed with
+  /// @ref raw_file_cache_id.  Two opens with equal keys may share what was
+  /// derived from either (the @c fs_cache keys its generations by it).
+  [[nodiscard]] std::string identity_cache_key() const
+  {
+    return identity().cache_key(raw_file_cache_id());
+  }
+
+  /// Backend locator, part of the identity-aware prefetching-cache key (see
+  /// @ref identity_cache_key).  Often equal to @c object_path() but may differ
+  /// for backends that need to distinguish otherwise-equal paths (versioned S3
+  /// keys, normalized URLs, …).
   [[nodiscard]] virtual const std::string& raw_file_cache_id() const noexcept = 0;
 
   /// The path / URL / key the caller used to construct this object.
@@ -108,10 +140,21 @@ class io_object : public std::enable_shared_from_this<io_object> {
   [[nodiscard]] virtual size_t size() const noexcept = 0;
 
   /// Opaque cache validator observed when the object was opened; empty when
-  /// unavailable.  HTTP backends preserve quotes and a weak W/ prefix.  This
-  /// is not an If-Match or If-Range token.  The view is valid for this
-  /// object's lifetime.
+  /// unavailable.  HTTP backends preserve quotes and a weak W/ prefix.  A
+  /// backend decides whether it may be sent back as a request condition: the
+  /// REST reactor sends a strong tag as @c If-Match on its data GETs and never
+  /// sends a weak or otherwise unusable one. The default identity uses a
+  /// nonempty tag only when @ref validation_tag_is_strong holds. The view is
+  /// valid for this object's lifetime.
   [[nodiscard]] virtual std::string_view validation_tag() const noexcept { return {}; }
+
+  /// Whether a nonempty validation_tag() is a strong validator: equal tags
+  /// of the same size at the same raw_file_cache_id() name byte-identical
+  /// versions. Default false: an opaque tag is not reusable evidence.
+  [[nodiscard]] virtual bool validation_tag_is_strong() const noexcept { return false; }
+
+ private:
+  std::uint64_t const _open_generation = next_open_generation();
 };
 
 class io_object_metadata {
@@ -239,6 +282,27 @@ class prepared_io_completion final {
   callback_type _callback;
 };
 
+/// Which of a reactor's two queues a read waits in.  A reactor prefers its
+/// @c high queue over its @c low one, and parks an active @c low request at a
+/// slice boundary when a @c high one arrives, so a read the executor is blocked
+/// on does not queue behind bulk readahead.  The preference is not strict: a
+/// tiered reactor (uring) grants the low tier bounded service, so waiting low
+/// work is never starved by a continuous stream of high requests (see
+/// @c uring::config::low_service_interval).
+///
+/// @c automatic (the read APIs' default) always resolves to @c high: anything
+/// a caller did not explicitly mark as background is demand work it may block
+/// on, whatever the call shape.  Only an explicit @c low (the cache prefetch
+/// stamps it) lands in the low tier.
+enum class io_priority : std::uint8_t { automatic, high, low };
+
+/// @p requested, or @p fallback when it is @c io_priority::automatic.
+[[nodiscard]] constexpr io_priority resolve_priority(io_priority requested,
+                                                     io_priority fallback) noexcept
+{
+  return requested == io_priority::automatic ? fallback : requested;
+}
+
 struct prepared_io_slice {
   /// The logical caller-requested window. A reactor may widen the physical I/O
   /// for alignment or a cached chunk's advertised fill, but device copies and
@@ -247,6 +311,9 @@ struct prepared_io_slice {
   host_buffer h_buffer;  // monostate if using reactor-owned staging
   device_buffer d_buffer;
   std::shared_ptr<prepared_io_completion> on_complete;
+  /// Reactor queue for this slice (see @ref io_priority); a request takes its
+  /// first slice's value, resolving @c automatic by call shape.
+  io_priority priority{io_priority::automatic};
 
   prepared_io_slice() noexcept = default;
   explicit prepared_io_slice(range r, host_buffer h) noexcept : rng(r), h_buffer(std::move(h)) {}

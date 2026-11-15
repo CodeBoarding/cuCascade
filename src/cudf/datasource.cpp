@@ -21,7 +21,8 @@
 #include <cucascade/exec/semi_future.hpp>
 #include <cucascade/exec/try.hpp>
 #include <cucascade/io/byte_range.hpp>
-#include <cucascade/io/cache/prefetching_cache.hpp>
+#include <cucascade/io/cache/fs_cache.hpp>
+#include <cucascade/log/logging.hpp>
 
 #include <rmm/device_buffer.hpp>
 
@@ -43,7 +44,50 @@ struct io_read_to_gpu_message {
   static constexpr char const* message{"io:read_to_gpu"};
 };
 
-// Bridge a semi_future into a real (promise-backed) std::future. Promise,
+// Deferred call that owns a read: destroying it waits for the read, so a future returned by
+// std::async(std::launch::deferred, joining_future{...}) joins its read when it is dropped.
+template <typename T>
+class joining_future {
+ public:
+  explicit joining_future(std::future<T> read) noexcept : _read(std::move(read)) {}
+
+  joining_future(joining_future&&) noexcept            = default;
+  joining_future& operator=(joining_future&&) noexcept = delete;
+  joining_future(joining_future const&)                = delete;
+  joining_future& operator=(joining_future const&)     = delete;
+
+  ~joining_future()
+  {
+    if (_read.valid()) { _read.wait(); }
+  }
+
+  T operator()() { return _read.get(); }
+
+ private:
+  std::future<T> _read;
+};
+
+// A host read into a buffer that the returned future owns.  The read is declared after the buffer
+// so that it is joined before the buffer is freed.
+class owning_host_read {
+ public:
+  owning_host_read(std::vector<uint8_t> buffer, std::future<size_t> read) noexcept
+    : _buffer(std::move(buffer)), _read(std::move(read))
+  {
+  }
+
+  std::unique_ptr<cudf::io::datasource::buffer> operator()()
+  {
+    _buffer.resize(_read.get());
+    return cudf::io::datasource::buffer::create(std::move(_buffer));
+  }
+
+ private:
+  std::vector<uint8_t> _buffer;
+  std::future<size_t> _read;
+};
+
+// Bridge a semi_future into a std::future that joins the read when dropped. Promise,
 // std::future, and the exact type-erased terminal are all built before
 // producer() may publish IO, so callback installation is a move-only,
 // non-allocating handoff.
@@ -62,7 +106,7 @@ std::future<size_t> bridge_semi_to_std(Producer&& producer)
   }};
   auto sf = std::forward<Producer>(producer)();
   std::move(sf).install_callback(std::move(terminal));
-  return fut;
+  return std::async(std::launch::deferred, joining_future<size_t>{std::move(fut)});
 }
 
 }  // namespace
@@ -70,6 +114,9 @@ std::future<size_t> bridge_semi_to_std(Producer&& producer)
 datasource::datasource(std::shared_ptr<ioctx> io_ctx, std::shared_ptr<io_object> io_obj)
   : _io_ctx(std::move(io_ctx)), _io_object(std::move(io_obj))
 {
+  // A newer identity of the path retires the metadata of the version it replaced
+  // and fences slow parses of that version.
+  if (_io_ctx && _io_object) { _io_ctx->metadata_store().open_observed(*_io_object); }
 }
 
 datasource::~datasource() {}
@@ -77,8 +124,7 @@ datasource::~datasource() {}
 std::shared_ptr<io_object_metadata> datasource::metadata() const
 {
   if (!_io_ctx || !_io_object) { return nullptr; }
-  auto& cache = _io_ctx->metadata_store();
-  return cache.get_metadata(*_io_object);
+  return _io_ctx->metadata_store().get_metadata(*_io_object);
 }
 
 [[nodiscard]] bool datasource::store_metadata(std::shared_ptr<io_object_metadata> metadata)
@@ -99,7 +145,7 @@ bool datasource::is_device_read_preferred(size_t) const { return _io_ctx->suppor
 
 size_t datasource::host_read(size_t offset, size_t size, uint8_t* dst)
 {
-  if (uses_prefetching_cache()) {
+  if (uses_fs_cache()) {
     auto* cache = _io_ctx->cache();
     return cache->host_read(*_io_object, offset, size, dst, &_prefetch_handle);
   }
@@ -117,7 +163,7 @@ std::unique_ptr<cudf::io::datasource::buffer> datasource::host_read(size_t offse
 std::future<size_t> datasource::host_read_async(size_t offset, size_t size, uint8_t* dst)
 {
   return bridge_semi_to_std([&] {
-    if (uses_prefetching_cache()) {
+    if (uses_fs_cache()) {
       auto* cache = _io_ctx->cache();
       return cache->host_read_async(*_io_object, offset, size, dst, &_prefetch_handle);
     }
@@ -132,11 +178,7 @@ std::future<std::unique_ptr<cudf::io::datasource::buffer>> datasource::host_read
   size           = std::min(size, file_size > offset ? file_size - offset : size_t{0});
   auto buf       = std::vector<uint8_t>(size);
   auto fut       = host_read_async(offset, size, buf.data());
-  return std::async(std::launch::deferred, [s = std::move(fut), buf = std::move(buf)]() mutable {
-    auto n = s.get();
-    buf.resize(n);
-    return cudf::io::datasource::buffer::create(std::move(buf));
-  });
+  return std::async(std::launch::deferred, owning_host_read{std::move(buf), std::move(fut)});
 }
 
 std::unique_ptr<cudf::io::datasource::buffer> datasource::device_read(size_t offset,
@@ -172,7 +214,7 @@ std::future<size_t> datasource::device_read_async(size_t offset,
 {
   ::cuda::stream_ref stream{stream_arg};
   return bridge_semi_to_std([&] {
-    if (uses_prefetching_cache()) {
+    if (uses_fs_cache()) {
       auto* cache = _io_ctx->cache();
       return cache->device_read_async(*_io_object, offset, size, dst, stream, &_prefetch_handle);
     }
@@ -181,25 +223,28 @@ std::future<size_t> datasource::device_read_async(size_t offset,
 }
 
 std::future<size_t> datasource::device_read_ranges_async(std::span<const slice> ranges,
-                                                         ::cuda::stream_ref stream)
+                                                         ::cuda::stream_ref stream,
+                                                         io_priority priority)
 {
   return bridge_semi_to_std([&] {
-    if (uses_prefetching_cache()) {
+    if (uses_fs_cache()) {
       auto* cache = _io_ctx->cache();
-      return cache->device_read_ranges_async(*_io_object, ranges, stream, &_prefetch_handle);
+      return cache->device_read_ranges_async(
+        *_io_object, ranges, stream, &_prefetch_handle, priority);
     }
-    return _io_ctx->device_readv_async_io(*_io_object, ranges, stream);
+    return _io_ctx->device_readv_async_io(*_io_object, ranges, stream, priority);
   });
 }
 
-std::future<size_t> datasource::host_read_ranges_async(std::span<const slice> ranges)
+std::future<size_t> datasource::host_read_ranges_async(std::span<const slice> ranges,
+                                                       io_priority priority)
 {
   return bridge_semi_to_std([&] {
-    if (uses_prefetching_cache()) {
+    if (uses_fs_cache()) {
       auto* cache = _io_ctx->cache();
-      return cache->host_read_ranges_async(*_io_object, ranges, &_prefetch_handle);
+      return cache->host_read_ranges_async(*_io_object, ranges, &_prefetch_handle, priority);
     }
-    return _io_ctx->host_readv_async_io(*_io_object, ranges);
+    return _io_ctx->host_readv_async_io(*_io_object, ranges, priority);
   });
 }
 
@@ -207,7 +252,7 @@ std::unique_ptr<datasource> datasource::duplicate() const
 {
   // Share the io_ctx and io_object — both are shared_ptr-managed and
   // deliberately reused across splits of the same file.  The new
-  // datasource starts with a default-constructed prefetching_handle so
+  // datasource starts with a default-constructed cache_handle so
   // its fadvise() calls can't accidentally cancel the original's work.
   return std::make_unique<datasource>(_io_ctx, _io_object);
 }
@@ -216,7 +261,7 @@ void datasource::fadvise(std::span<const cudf::io::text::byte_range_info> ranges
                          std::optional<int> dev_id)
 {
   auto* cache = _io_ctx->cache();
-  if (cache == nullptr || !_io_ctx->can_use_prefetching_cache()) { return; }
+  if (cache == nullptr || !_io_ctx->can_use_fs_cache()) { return; }
 
   // The contract is "one scan, one datasource": a second inserting fadvise on
   // a datasource that already carries an active handle is a caller bug.  Warn
@@ -224,7 +269,7 @@ void datasource::fadvise(std::span<const cudf::io::text::byte_range_info> ranges
   // disposed by the move-assignment below.
   if (_prefetch_handle && _prefetch_handle.is_active()) {
     CUCASCADE_LOG_WARN(
-      "datasource::fadvise: a prefetching_handle was already stored on "
+      "datasource::fadvise: a cache_handle was already stored on "
       "this datasource (path={}); cancelling the stale request.  Each scan "
       "should own a unique datasource.",
       _io_object->object_path());
@@ -254,7 +299,7 @@ void datasource::update(cache::scan_stage site)
 
 prepare_result datasource::prepare_prefetch(bool wait_for_eviction)
 {
-  if (!_prefetch_handle || !uses_prefetching_cache()) { return prepare_result::nothing_to_prepare; }
+  if (!_prefetch_handle || !uses_fs_cache()) { return prepare_result::nothing_to_prepare; }
   auto* cache = _io_ctx->cache();
   if (cache == nullptr) { return prepare_result::nothing_to_prepare; }
   switch (cache->prepare(_prefetch_handle, wait_for_eviction)) {
@@ -266,28 +311,29 @@ prepare_result datasource::prepare_prefetch(bool wait_for_eviction)
   return prepare_result::nothing_to_prepare;
 }
 
-prefetch_refusal datasource::prefetch_async(exec::invocable<void(bool) noexcept> on_done)
+prefetch_refusal datasource::prefetch_async(
+  exec::invocable<void(cache::prefetch_result) noexcept> on_done)
 {
-  if (!_prefetch_handle || !uses_prefetching_cache()) {
-    on_done(false);
+  if (!_prefetch_handle || !uses_fs_cache()) {
+    on_done({});
     return prefetch_refusal::no_cache;
   }
 
   if (_prefetch_handle.has_started_reading()) {
-    on_done(false);
+    on_done({});
     return prefetch_refusal::consumer_ahead;
   }
 
   auto const producer = _prefetch_handle.producer_state();
   if (producer == cache::producer_stage::abandoned) {
-    on_done(false);
+    on_done({});
     // Allocation pressure no longer abandons a request: prepare() leaves it
     // queued so readahead can evict and retry.  An abandoned request therefore
     // lost the race with its consumer (or was cancelled), not its buffers.
     return prefetch_refusal::other;
   }
   if (producer < cache::producer_stage::prepared) {
-    on_done(false);
+    on_done({});
     return prefetch_refusal::other;
   }
   if (_io_ctx->cache()->prefetch(_prefetch_handle, std::move(on_done))) {
@@ -298,11 +344,12 @@ prefetch_refusal datasource::prefetch_async(exec::invocable<void(bool) noexcept>
                                                 : prefetch_refusal::other;
 }
 
-bool datasource::uses_prefetching_cache()
+std::exception_ptr datasource::prefetch_failure() const noexcept
 {
-  auto* cache = _io_ctx->cache();
-  return cache != nullptr && _io_ctx->can_use_prefetching_cache();
+  return _prefetch_handle ? _prefetch_handle.failure() : nullptr;
 }
+
+bool datasource::uses_fs_cache() const noexcept { return _io_ctx->uses_fs_cache(); }
 
 std::unique_ptr<datasource> open_datasource(std::shared_ptr<ioctx> io_ctx, std::string path)
 {

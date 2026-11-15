@@ -19,7 +19,7 @@
 #pragma once
 
 #include <cucascade/exec/invocable.hpp>
-#include <cucascade/io/cache/prefetching_cache.hpp>
+#include <cucascade/io/cache/fs_cache.hpp>
 #include <cucascade/io/io_context.hpp>
 #include <cucascade/io/types.hpp>
 
@@ -31,6 +31,7 @@
 #include <rmm/cuda_stream_view.hpp>
 #endif
 
+#include <exception>
 #include <span>
 
 namespace cucascade::io {
@@ -57,7 +58,7 @@ using cudf_stream_type = rmm::cuda_stream_view;
  * Ownership model: one scan owns one @c datasource.  The underlying
  * @c io_object can be shared across multiple datasources (e.g. when
  * the same file is scanned in different pipelines), but the datasource
- * itself stores per-scan state (notably the @c prefetching_handle returned
+ * itself stores per-scan state (notably the @c cache_handle returned
  * by an @c fadvise call) and is therefore not safe to share.
  */
 /// Why a datasource did or did not start a prefetch, so the readahead can
@@ -76,7 +77,9 @@ enum class prefetch_refusal : std::uint8_t {
   /// issued.  Normal allocation pressure is reported earlier by prepare().
   memory_pressure,
   /// The cache refused for a reason of its own (already loading, request
-  /// cancelled, backend cannot serve vectored host reads).
+  /// cancelled, backend cannot serve vectored host reads), or found nothing to
+  /// claim, in which case the completion reports @c {ok = true, covered} (see
+  /// @c datasource::prefetch_async).
   other,
 };
 
@@ -94,8 +97,20 @@ enum class prepare_result : std::uint8_t {
   nothing_to_prepare,
 };
 
+/**
+ * @brief cudf datasource over a cuCascade @c ioctx.
+ *
+ * The future of an asynchronous read owns the read: getting, waiting on or destroying it waits
+ * until the read has finished, so a destination only has to outlive its future.  The futures are
+ * deferred, so @c wait_for and @c wait_until return @c std::future_status::deferred.  A device
+ * read finishes only once its copy has run on the read's stream.  Do not destroy a future on a
+ * thread that completes reads, such as a reactor or cache completion thread, or while the read's
+ * stream waits on the destroying thread.
+ */
 class datasource : public cudf::io::datasource {
  public:
+  /// Reads @p io_obj through @p io_ctx, and records the object's identity as
+  /// observed in the ioctx's metadata store (@c metadata_store::open_observed).
   explicit datasource(std::shared_ptr<ioctx> io_ctx, std::shared_ptr<io_object> io_obj);
 
   ~datasource() override;
@@ -113,10 +128,14 @@ class datasource : public cudf::io::datasource {
   [[nodiscard]] const io_object& get_io_object() const noexcept { return *_io_object; }
 
   /// Backend-parsed metadata for this datasource's io_object, looked up in the
-  /// ioctx's metadata store (null when no cache or no entry). Independent of
-  /// the prefetching machinery.
+  /// ioctx's metadata store: published for an equal object identity (null when
+  /// there is none). Independent of the prefetching machinery.
   [[nodiscard]] std::shared_ptr<io_object_metadata> metadata() const;
 
+  /// Publish @p metadata for this datasource's io_object in the ioctx's
+  /// metadata store (see @c cache::metadata_store::register_metadata: an entry
+  /// already published for the same identity is kept).  False only without an
+  /// ioctx or io_object.
   [[nodiscard]] bool store_metadata(std::shared_ptr<io_object_metadata> metadata);
 
   // ---- cudf::io::datasource overrides ---------------------------------------
@@ -155,16 +174,24 @@ class datasource : public cudf::io::datasource {
   /// read.  Callers holding many ranges (e.g. a parquet scan's column chunks)
   /// should prefer this over one @c device_read_async per range: it costs one
   /// request instead of N, and lets the backend fuse and order the whole batch.
+  ///
+  /// \p priority is the reactor queue tier (see @c io_priority); @c automatic
+  /// resolves to high, as for every device read.
   std::future<size_t> device_read_ranges_async(std::span<const slice> slices,
-                                               ::cuda::stream_ref stream);
+                                               ::cuda::stream_ref stream,
+                                               io_priority priority = io_priority::automatic);
 
-  std::future<size_t> host_read_ranges_async(std::span<const slice> slices);
+  /// \brief Vectored host read.  \p priority as above; @c automatic resolves to
+  /// high, since the caller (e.g. a native decoder) typically blocks on it.
+  /// Pass @c io_priority::low explicitly for background/readahead reads.
+  std::future<size_t> host_read_ranges_async(std::span<const slice> slices,
+                                             io_priority priority = io_priority::automatic);
 
   // ---- Advisory IO ---------------------------------------------------------
 
   /// \brief Return a fresh datasource that shares this one's @c ioctx and
   /// @c io_object (so it points at the same file) but carries an
-  /// empty @c prefetching_handle.
+  /// empty @c cache_handle.
   ///
   /// \note Used when a single file is split across multiple scans (e.g. several
   /// row_group_slices from the same parquet file).  Each split owns its
@@ -177,7 +204,7 @@ class datasource : public cudf::io::datasource {
   /// soon.
   ///
   /// Hands @p ranges to the prefetching cache, stashes the returned
-  /// @c prefetching_handle on this datasource (which disposes the request when
+  /// @c cache_handle on this datasource (which disposes the request when
   /// it goes away) and drives it to @c scan_stage::initialized.  No-op when the
   /// cache is unavailable.  A second inserting call while an active handle is
   /// already stored is a caller bug and only logs a warning: the datasource
@@ -189,29 +216,59 @@ class datasource : public cudf::io::datasource {
 
   /// Allocate staging buffers for the stashed request, ahead of prefetching it.
   /// @p wait_for_eviction lets the call wait on the evictor rather than fail on
-  /// a momentarily empty pool.  See @c prefetching_cache::prepare.
+  /// a momentarily empty pool.  See @c fs_cache::prepare.
   prepare_result prepare_prefetch(bool wait_for_eviction);
 
   /// Issue prefetch IO for the stashed handle.  @p on_done fires exactly once
   /// with the outcome — inline when no IO is issued, otherwise from the IO
-  /// completion.  Returns @c prefetch_refusal::issued when IO went out, and
-  /// otherwise why it did not.
-  prefetch_refusal prefetch_async(exec::invocable<void(bool) noexcept> on_done);
+  /// completion.  Coverage is separate from success: another loader can own
+  /// chunks that this prefetch skipped (see @c fs_cache::prefetch).  Returns
+  /// @c prefetch_refusal::issued when IO went out, and otherwise why it did not.
+  /// A refusal (@c no_cache, @c consumer_ahead, a request not prepared or
+  /// abandoned, or one the cache refused) reports
+  /// @c {ok = false, covered = false}, with one exception: when nothing was
+  /// claimable — every requested chunk already resident or loading for another
+  /// reader — the cache settles @c {ok = true, covered}, and this still returns
+  /// @c other (or @c consumer_ahead if the consumer started reading meanwhile).
+  /// @c covered then says whether this call found the requested bytes
+  /// resident; it pins nothing (see @c cache::prefetch_result::covered).
+  prefetch_refusal prefetch_async(exec::invocable<void(cache::prefetch_result) noexcept> on_done);
 
-  [[nodiscard]] bool uses_prefetching_cache() const noexcept;
+  /// Why this datasource's prefetch failed, if it did: null otherwise, and
+  /// null when no prefetch was ever issued.  Set before the prefetch's
+  /// completion callback fires and before @c wait_until_ready would return.
+  [[nodiscard]] std::exception_ptr prefetch_failure() const noexcept;
+
+  /// True iff reads and prefetches through this datasource consult the
+  /// ioctx's @c fs_cache: the ioctx has one initialized and its backend can use
+  /// it.  Computed live, so it tracks the ioctx's @c initialize_cache /
+  /// @c shutdown_cache transitions.  Defers to @c ioctx::uses_fs_cache.
+  [[nodiscard]] bool uses_fs_cache() const noexcept;
+
+  /// Diagnostics: how long demand reads through this datasource waited on its
+  /// in-flight prefetch (see @c cache::cache_handle::demand_wait_ns).
+  [[nodiscard]] std::uint64_t demand_wait_ns() const noexcept
+  {
+    return _prefetch_handle.demand_wait_ns();
+  }
+
+  /// Diagnostics: cache chunks named by this datasource's request (0 without one).
+  [[nodiscard]] std::size_t cache_chunk_count() const noexcept
+  {
+    auto const chunks = _prefetch_handle.chunks();
+    return chunks ? chunks->size() : 0;
+  }
 
   /// Whether the backend serving this datasource would rather be handed one
   /// batched request than a stream of small reads.  See @c ioctx::prefers_bulk_io.
   [[nodiscard]] bool prefers_bulk_io() const noexcept;
 
  private:
-  [[nodiscard]] bool uses_prefetching_cache();
-
   std::shared_ptr<ioctx> _io_ctx;
   std::shared_ptr<io_object> _io_object;
   /// Handle of the most recent insert into the prefetching cache, or empty
   /// if none was made.  Disposing it lets the cache reclaim the request.
-  cache::prefetching_handle _prefetch_handle;
+  cache::cache_handle _prefetch_handle;
 };
 
 /// Open a datasource for @p path on @p io_ctx: creates the backend-appropriate
