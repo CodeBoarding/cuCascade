@@ -1,7 +1,7 @@
 {
   "repository_name": ".codeboarding-target",
-  "timestamp": "2026-11-11T01:43:49.604995+00:00",
-  "overall_score": 0.7438715131022823,
+  "timestamp": "2026-11-15T03:42:33.839755+00:00",
+  "overall_score": 0.7791817087845969,
   "check_summaries": [
     {
       "check_name": "function_size",
@@ -10,10 +10,10 @@
         "cpp"
       ],
       "check_type": "standard",
-      "total_entities_checked": 883,
-      "findings_count": 6,
-      "warning_count": 6,
-      "score": 0.9932049830124575,
+      "total_entities_checked": 1302,
+      "findings_count": 10,
+      "warning_count": 10,
+      "score": 0.9923195084485407,
       "finding_groups": [
         {
           "severity": "warning",
@@ -30,30 +30,51 @@
             {
               "entity_name": "cucascade.io.uring.(anonymous)[c:@N@cucascade@N@io@N@uring@aN]",
               "file_path": "src/io/uring/uring_reactor.cpp",
-              "line_start": 59,
+              "line_start": 65,
               "line_end": 455,
-              "metric_value": 396
+              "metric_value": 390
+            },
+            {
+              "entity_name": "cucascade.io.tls.openssl[c:@N@cucascade@N@io@N@tls@N@openssl]",
+              "file_path": "src/io/tls/openssl_context.cpp",
+              "line_start": 59,
+              "line_end": 439,
+              "metric_value": 380
+            },
+            {
+              "entity_name": "io_utils[c:@N@io_utils]",
+              "file_path": "include/cucascade/io/io_utils.hpp",
+              "line_start": 15,
+              "line_end": 296,
+              "metric_value": 281
             },
             {
               "entity_name": "main[c:@F@main#I#**C#]",
               "file_path": "benchmark/s3_parquet_benchmark.cpp",
-              "line_start": 321,
-              "line_end": 595,
-              "metric_value": 274
-            },
-            {
-              "entity_name": "cucascade.memory.(anonymous)[c:@N@cucascade@N@memory@aN]",
-              "file_path": "src/memory/common.cpp",
-              "line_start": 43,
-              "line_end": 261,
-              "metric_value": 218
+              "line_start": 239,
+              "line_end": 510,
+              "metric_value": 271
             },
             {
               "entity_name": "cucascade.io[c:@N@cucascade@N@io]",
               "file_path": "include/cucascade/cudf/datasource.hpp",
-              "line_start": 36,
-              "line_end": 240,
-              "metric_value": 204
+              "line_start": 37,
+              "line_end": 297,
+              "metric_value": 260
+            },
+            {
+              "entity_name": "cucascade.memory.(anonymous)[c:@N@cucascade@N@memory@aN]",
+              "file_path": "src/memory/common.cpp",
+              "line_start": 44,
+              "line_end": 262,
+              "metric_value": 218
+            },
+            {
+              "entity_name": "cucascade.io.http[c:@N@cucascade@N@io@N@http]",
+              "file_path": "src/io/rest/http/chunked_decoder.cpp",
+              "line_start": 43,
+              "line_end": 253,
+              "metric_value": 210
             },
             {
               "entity_name": "cucascade.io.rest.s3.presign_url[c:@N@cucascade@N@io@N@rest@N@s3@F@presign_url#I#I#I#I#&1I#L#I#I#]",
@@ -61,6 +82,13 @@
               "line_start": 267,
               "line_end": 439,
               "metric_value": 172
+            },
+            {
+              "entity_name": "cucascade.io.net[c:@N@cucascade@N@io@N@net]",
+              "file_path": "src/io/rest/net/cipher_ring.hpp",
+              "line_start": 58,
+              "line_end": 226,
+              "metric_value": 168
             }
           ]
         }
@@ -74,7 +102,7 @@
       ],
       "check_type": "circular_dependencies",
       "cycles": [],
-      "packages_checked": 28,
+      "packages_checked": 32,
       "packages_in_cycles": 0
     },
     {
@@ -84,9 +112,9 @@
         "cpp"
       ],
       "check_type": "standard",
-      "total_entities_checked": 297,
-      "findings_count": 297,
-      "warning_count": 297,
+      "total_entities_checked": 357,
+      "findings_count": 357,
+      "warning_count": 357,
       "score": 0.0,
       "finding_groups": [
         {
@@ -109,10 +137,31 @@
               "metric_value": 0.0
             },
             {
+              "entity_name": "[unused_variable] Included header algorithm is not used directly (fixes available)",
+              "file_path": "benchmark/benchmark_gpu_to_gpu_converter.cpp",
+              "line_start": 56,
+              "line_end": 56,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header memory is not used directly (fixes available)",
+              "file_path": "benchmark/benchmark_gpu_to_gpu_converter.cpp",
+              "line_start": 60,
+              "line_end": 60,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header utility is not used directly (fixes available)",
+              "file_path": "benchmark/benchmark_gpu_to_gpu_converter.cpp",
+              "line_start": 61,
+              "line_end": 61,
+              "metric_value": 0.0
+            },
+            {
               "entity_name": "[unused_variable] Included header vector is not used directly (fixes available)",
-              "file_path": "benchmark/benchmark_disk_converter.cpp",
-              "line_start": 45,
-              "line_end": 45,
+              "file_path": "benchmark/benchmark_gpu_to_gpu_converter.cpp",
+              "line_start": 62,
+              "line_end": 62,
               "metric_value": 0.0
             },
             {
@@ -130,24 +179,10 @@
               "metric_value": 0.0
             },
             {
-              "entity_name": "[unused_variable] Included header vector is not used directly (fixes available)",
-              "file_path": "benchmark/benchmark_representation_converter.cpp",
-              "line_start": 39,
-              "line_end": 39,
-              "metric_value": 0.0
-            },
-            {
               "entity_name": "[unused_variable] Included header memory is not used directly (fix available)",
               "file_path": "benchmark/parquet_benchmark.cpp",
               "line_start": 50,
               "line_end": 50,
-              "metric_value": 0.0
-            },
-            {
-              "entity_name": "[unused_variable] Included header future is not used directly (fixes available)",
-              "file_path": "benchmark/parquet_io_benchmark.cpp",
-              "line_start": 59,
-              "line_end": 59,
               "metric_value": 0.0
             },
             {
@@ -165,17 +200,17 @@
               "metric_value": 0.0
             },
             {
-              "entity_name": "[unused_variable] Included header string_view is not used directly (fix available)",
+              "entity_name": "[unused_variable] Included header future is not used directly (fixes available)",
               "file_path": "benchmark/parquet_s3_io_benchmark.cpp",
-              "line_start": 76,
-              "line_end": 76,
+              "line_start": 69,
+              "line_end": 69,
               "metric_value": 0.0
             },
             {
-              "entity_name": "[unused_variable] Included header thread is not used directly (fix available)",
-              "file_path": "benchmark/s3_parquet_benchmark.cpp",
-              "line_start": 67,
-              "line_end": 67,
+              "entity_name": "[unused_variable] Included header string_view is not used directly (fixes available)",
+              "file_path": "benchmark/parquet_s3_io_benchmark.cpp",
+              "line_start": 75,
+              "line_end": 75,
               "metric_value": 0.0
             },
             {
@@ -188,8 +223,8 @@
             {
               "entity_name": "[unused_variable] Included header span is not used directly (fix available)",
               "file_path": "include/cucascade/cudf/datasource.hpp",
-              "line_start": 34,
-              "line_end": 34,
+              "line_start": 35,
+              "line_end": 35,
               "metric_value": 0.0
             },
             {
@@ -235,24 +270,10 @@
               "metric_value": 0.0
             },
             {
-              "entity_name": "[unused_variable] Included header condition_variable is not used directly (fixes available)",
+              "entity_name": "[unused_variable] Included header memory is not used directly (fix available)",
               "file_path": "include/cucascade/data/data_repository.hpp",
-              "line_start": 22,
-              "line_end": 22,
-              "metric_value": 0.0
-            },
-            {
-              "entity_name": "[unused_variable] Included header memory is not used directly (fixes available)",
-              "file_path": "include/cucascade/data/data_repository.hpp",
-              "line_start": 23,
-              "line_end": 23,
-              "metric_value": 0.0
-            },
-            {
-              "entity_name": "[unused_variable] Included header optional is not used directly (fixes available)",
-              "file_path": "include/cucascade/data/data_repository.hpp",
-              "line_start": 25,
-              "line_end": 25,
+              "line_start": 26,
+              "line_end": 26,
               "metric_value": 0.0
             },
             {
@@ -326,14 +347,7 @@
               "metric_value": 0.0
             },
             {
-              "entity_name": "[unused_variable] Included header unordered_map is not used directly (fixes available)",
-              "file_path": "include/cucascade/data/representation_converter.hpp",
-              "line_start": 31,
-              "line_end": 31,
-              "metric_value": 0.0
-            },
-            {
-              "entity_name": "[unused_variable] Included header iostream is not used directly (fixes available)",
+              "entity_name": "[unused_variable] Included header source_location is not used directly (fixes available)",
               "file_path": "include/cucascade/error.hpp",
               "line_start": 28,
               "line_end": 28,
@@ -375,21 +389,7 @@
               "metric_value": 0.0
             },
             {
-              "entity_name": "[unused_variable] Included header array is not used directly (fixes available)",
-              "file_path": "include/cucascade/exec/cuda_event_completion_poll.hpp",
-              "line_start": 25,
-              "line_end": 25,
-              "metric_value": 0.0
-            },
-            {
-              "entity_name": "[unused_variable] Included header memory is not used directly (fixes available)",
-              "file_path": "include/cucascade/exec/cuda_event_completion_poll.hpp",
-              "line_start": 32,
-              "line_end": 32,
-              "metric_value": 0.0
-            },
-            {
-              "entity_name": "[unused_variable] Included header type_traits is not used directly (fixes available)",
+              "entity_name": "[unused_variable] Included header type_traits is not used directly (fix available)",
               "file_path": "include/cucascade/exec/cuda_event_completion_poll.hpp",
               "line_start": 36,
               "line_end": 36,
@@ -433,29 +433,29 @@
             {
               "entity_name": "[unused_variable] Included header concepts is not used directly (fixes available)",
               "file_path": "include/cucascade/exec/thread_pool.hpp",
-              "line_start": 25,
-              "line_end": 25,
+              "line_start": 24,
+              "line_end": 24,
               "metric_value": 0.0
             },
             {
               "entity_name": "[unused_variable] Included header exception is not used directly (fixes available)",
               "file_path": "include/cucascade/exec/thread_pool.hpp",
-              "line_start": 27,
-              "line_end": 27,
+              "line_start": 26,
+              "line_end": 26,
               "metric_value": 0.0
             },
             {
               "entity_name": "[unused_variable] Included header latch is not used directly (fixes available)",
               "file_path": "include/cucascade/exec/thread_pool.hpp",
-              "line_start": 29,
-              "line_end": 29,
+              "line_start": 28,
+              "line_end": 28,
               "metric_value": 0.0
             },
             {
               "entity_name": "[unused_variable] Included header queue is not used directly (fixes available)",
               "file_path": "include/cucascade/exec/thread_pool.hpp",
-              "line_start": 31,
-              "line_end": 31,
+              "line_start": 30,
+              "line_end": 30,
               "metric_value": 0.0
             },
             {
@@ -524,85 +524,43 @@
             {
               "entity_name": "[unused_variable] Included header cstdint is not used directly (fixes available)",
               "file_path": "include/cucascade/io/io_request.hpp",
-              "line_start": 35,
-              "line_end": 35,
+              "line_start": 36,
+              "line_end": 36,
               "metric_value": 0.0
             },
             {
               "entity_name": "[unused_variable] Included header source_location is not used directly (fixes available)",
-              "file_path": "include/cucascade/io/io_request.hpp",
-              "line_start": 40,
-              "line_end": 40,
-              "metric_value": 0.0
-            },
-            {
-              "entity_name": "[unused_variable] Included header span is not used directly (fixes available)",
               "file_path": "include/cucascade/io/io_request.hpp",
               "line_start": 41,
               "line_end": 41,
               "metric_value": 0.0
             },
             {
-              "entity_name": "[unused_variable] Included header vector is not used directly (fixes available)",
+              "entity_name": "[unused_variable] Included header span is not used directly (fixes available)",
               "file_path": "include/cucascade/io/io_request.hpp",
-              "line_start": 47,
-              "line_end": 47,
+              "line_start": 42,
+              "line_end": 42,
               "metric_value": 0.0
             },
             {
-              "entity_name": "[unused_variable] Included header algorithm is not used directly (fixes available)",
+              "entity_name": "[unused_variable] Included header iterator is not used directly (fixes available)",
               "file_path": "include/cucascade/io/io_utils.hpp",
-              "line_start": 5,
-              "line_end": 5,
-              "metric_value": 0.0
-            },
-            {
-              "entity_name": "[unused_variable] Included header cstring is not used directly (fixes available)",
-              "file_path": "include/cucascade/io/io_utils.hpp",
-              "line_start": 7,
-              "line_end": 7,
+              "line_start": 10,
+              "line_end": 10,
               "metric_value": 0.0
             },
             {
               "entity_name": "[unused_variable] Included header span is not used directly (fixes available)",
               "file_path": "include/cucascade/io/io_utils.hpp",
-              "line_start": 8,
-              "line_end": 8,
+              "line_start": 12,
+              "line_end": 12,
               "metric_value": 0.0
             },
             {
               "entity_name": "[unused_variable] Included header vector is not used directly (fixes available)",
               "file_path": "include/cucascade/io/io_utils.hpp",
-              "line_start": 9,
-              "line_end": 9,
-              "metric_value": 0.0
-            },
-            {
-              "entity_name": "[unused_variable] Included header memory is not used directly (fixes available)",
-              "file_path": "include/cucascade/io/kvikio/kvikio_context.hpp",
-              "line_start": 31,
-              "line_end": 31,
-              "metric_value": 0.0
-            },
-            {
-              "entity_name": "[unused_variable] Included header span is not used directly (fixes available)",
-              "file_path": "include/cucascade/io/kvikio/kvikio_context.hpp",
-              "line_start": 33,
-              "line_end": 33,
-              "metric_value": 0.0
-            },
-            {
-              "entity_name": "[unused_variable] Included header string_view is not used directly (fixes available)",
-              "file_path": "include/cucascade/io/kvikio/kvikio_context.hpp",
-              "line_start": 35,
-              "line_end": 35,
-              "metric_value": 0.0
-            },
-            {
-              "entity_name": "[unused_variable] Included header vector is not used directly (fixes available)",
-              "file_path": "include/cucascade/io/kvikio/kvikio_context.hpp",
-              "line_start": 37,
-              "line_end": 37,
+              "line_start": 13,
+              "line_end": 13,
               "metric_value": 0.0
             },
             {
@@ -617,34 +575,6 @@
               "file_path": "include/cucascade/io/rest/authorizer.hpp",
               "line_start": 26,
               "line_end": 26,
-              "metric_value": 0.0
-            },
-            {
-              "entity_name": "[unused_variable] Included header array is not used directly (fixes available)",
-              "file_path": "include/cucascade/io/rest/curl_handle.hpp",
-              "line_start": 29,
-              "line_end": 29,
-              "metric_value": 0.0
-            },
-            {
-              "entity_name": "[unused_variable] Included header memory is not used directly (fixes available)",
-              "file_path": "include/cucascade/io/rest/curl_handle.hpp",
-              "line_start": 31,
-              "line_end": 31,
-              "metric_value": 0.0
-            },
-            {
-              "entity_name": "[unused_variable] Included header mutex is not used directly (fixes available)",
-              "file_path": "include/cucascade/io/rest/curl_handle.hpp",
-              "line_start": 32,
-              "line_end": 32,
-              "metric_value": 0.0
-            },
-            {
-              "entity_name": "[unused_variable] Included header string is not used directly (fixes available)",
-              "file_path": "include/cucascade/io/rest/curl_handle.hpp",
-              "line_start": 34,
-              "line_end": 34,
               "metric_value": 0.0
             },
             {
@@ -669,80 +599,73 @@
               "metric_value": 0.0
             },
             {
-              "entity_name": "[unused_variable] Included header deque is not used directly (fixes available)",
-              "file_path": "include/cucascade/io/rest/rest_ioctx.hpp",
-              "line_start": 31,
-              "line_end": 31,
-              "metric_value": 0.0
-            },
-            {
               "entity_name": "[unused_variable] Included header functional is not used directly (fixes available)",
-              "file_path": "include/cucascade/io/rest/rest_ioctx.hpp",
-              "line_start": 32,
-              "line_end": 32,
-              "metric_value": 0.0
-            },
-            {
-              "entity_name": "[unused_variable] Included header memory is not used directly (fixes available)",
               "file_path": "include/cucascade/io/rest/rest_ioctx.hpp",
               "line_start": 33,
               "line_end": 33,
               "metric_value": 0.0
             },
             {
-              "entity_name": "[unused_variable] Included header span is not used directly (fixes available)",
+              "entity_name": "[unused_variable] Included header memory is not used directly (fixes available)",
               "file_path": "include/cucascade/io/rest/rest_ioctx.hpp",
-              "line_start": 36,
-              "line_end": 36,
+              "line_start": 34,
+              "line_end": 34,
               "metric_value": 0.0
             },
             {
-              "entity_name": "[unused_variable] Included header stop_token is not used directly (fixes available)",
+              "entity_name": "[unused_variable] Included header span is not used directly (fixes available)",
               "file_path": "include/cucascade/io/rest/rest_ioctx.hpp",
               "line_start": 37,
               "line_end": 37,
               "metric_value": 0.0
             },
             {
-              "entity_name": "[unused_variable] Included header string_view is not used directly (fixes available)",
+              "entity_name": "[unused_variable] Included header stop_token is not used directly (fixes available)",
               "file_path": "include/cucascade/io/rest/rest_ioctx.hpp",
-              "line_start": 39,
-              "line_end": 39,
+              "line_start": 38,
+              "line_end": 38,
               "metric_value": 0.0
             },
             {
-              "entity_name": "[unused_variable] Included header vector is not used directly (fixes available)",
+              "entity_name": "[unused_variable] Included header string_view is not used directly (fixes available)",
               "file_path": "include/cucascade/io/rest/rest_ioctx.hpp",
               "line_start": 40,
               "line_end": 40,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header deque is not used directly (fixes available)",
+              "file_path": "include/cucascade/io/rest/rest_reactor.hpp",
+              "line_start": 34,
+              "line_end": 34,
               "metric_value": 0.0
             },
             {
               "entity_name": "[unused_variable] Included header span is not used directly (fixes available)",
               "file_path": "include/cucascade/io/rest/rest_reactor.hpp",
-              "line_start": 39,
-              "line_end": 39,
-              "metric_value": 0.0
-            },
-            {
-              "entity_name": "[unused_variable] Included header stop_token is not used directly (fixes available)",
-              "file_path": "include/cucascade/io/rest/rest_reactor.hpp",
               "line_start": 40,
               "line_end": 40,
               "metric_value": 0.0
             },
             {
+              "entity_name": "[unused_variable] Included header stop_token is not used directly (fixes available)",
+              "file_path": "include/cucascade/io/rest/rest_reactor.hpp",
+              "line_start": 41,
+              "line_end": 41,
+              "metric_value": 0.0
+            },
+            {
               "entity_name": "[unused_variable] Included header string_view is not used directly (fixes available)",
               "file_path": "include/cucascade/io/rest/rest_reactor.hpp",
-              "line_start": 42,
-              "line_end": 42,
+              "line_start": 43,
+              "line_end": 43,
               "metric_value": 0.0
             },
             {
               "entity_name": "[unused_variable] Included header thread is not used directly (fixes available)",
               "file_path": "include/cucascade/io/rest/rest_reactor.hpp",
-              "line_start": 43,
-              "line_end": 43,
+              "line_start": 44,
+              "line_end": 44,
               "metric_value": 0.0
             },
             {
@@ -750,20 +673,6 @@
               "file_path": "include/cucascade/io/rest/s3/sigv4_authorizer.hpp",
               "line_start": 24,
               "line_end": 24,
-              "metric_value": 0.0
-            },
-            {
-              "entity_name": "[unused_variable] Included header memory is not used directly (fixes available)",
-              "file_path": "include/cucascade/io/rest/types.hpp",
-              "line_start": 26,
-              "line_end": 26,
-              "metric_value": 0.0
-            },
-            {
-              "entity_name": "[unused_variable] Included header span is not used directly (fixes available)",
-              "file_path": "include/cucascade/io/rest/types.hpp",
-              "line_start": 27,
-              "line_end": 27,
               "metric_value": 0.0
             },
             {
@@ -788,13 +697,6 @@
               "metric_value": 0.0
             },
             {
-              "entity_name": "[unused_variable] Included header type_traits is not used directly (fixes available)",
-              "file_path": "include/cucascade/io/s3rdma/s3rdma_ioctx.hpp",
-              "line_start": 33,
-              "line_end": 33,
-              "metric_value": 0.0
-            },
-            {
               "entity_name": "[unused_variable] Included header vector is not used directly (fixes available)",
               "file_path": "include/cucascade/io/s3rdma/s3rdma_ioctx.hpp",
               "line_start": 34,
@@ -806,6 +708,13 @@
               "file_path": "include/cucascade/io/templated_ioctx.hpp",
               "line_start": 31,
               "line_end": 31,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header concepts is not used directly (fixes available)",
+              "file_path": "include/cucascade/io/templated_ioctx.hpp",
+              "line_start": 34,
+              "line_end": 34,
               "metric_value": 0.0
             },
             {
@@ -873,16 +782,30 @@
             },
             {
               "entity_name": "[unused_variable] Included header span is not used directly (fixes available)",
+              "file_path": "include/cucascade/io/tls/tls.hpp",
+              "line_start": 29,
+              "line_end": 29,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header string_view is not used directly (fixes available)",
+              "file_path": "include/cucascade/io/tls/tls.hpp",
+              "line_start": 30,
+              "line_end": 30,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header span is not used directly (fixes available)",
               "file_path": "include/cucascade/io/types.hpp",
-              "line_start": 36,
-              "line_end": 36,
+              "line_start": 37,
+              "line_end": 37,
               "metric_value": 0.0
             },
             {
               "entity_name": "[unused_variable] Included header string_view is not used directly (fixes available)",
               "file_path": "include/cucascade/io/types.hpp",
-              "line_start": 38,
-              "line_end": 38,
+              "line_start": 39,
+              "line_end": 39,
               "metric_value": 0.0
             },
             {
@@ -907,45 +830,66 @@
               "metric_value": 0.0
             },
             {
-              "entity_name": "[unused_variable] Included header array is not used directly (fixes available)",
-              "file_path": "include/cucascade/io/uring/uring_reactor.hpp",
-              "line_start": 36,
-              "line_end": 36,
+              "entity_name": "[unused_variable] Included header vector is not used directly (fix available)",
+              "file_path": "include/cucascade/io/uring/uring_ioctx.hpp",
+              "line_start": 24,
+              "line_end": 24,
               "metric_value": 0.0
             },
             {
               "entity_name": "[unused_variable] Included header span is not used directly (fixes available)",
               "file_path": "include/cucascade/io/uring/uring_reactor.hpp",
-              "line_start": 41,
-              "line_end": 41,
+              "line_start": 43,
+              "line_end": 43,
               "metric_value": 0.0
             },
             {
               "entity_name": "[unused_variable] Included header stop_token is not used directly (fixes available)",
-              "file_path": "include/cucascade/io/uring/uring_reactor.hpp",
-              "line_start": 42,
-              "line_end": 42,
-              "metric_value": 0.0
-            },
-            {
-              "entity_name": "[unused_variable] Included header string_view is not used directly (fixes available)",
               "file_path": "include/cucascade/io/uring/uring_reactor.hpp",
               "line_start": 44,
               "line_end": 44,
               "metric_value": 0.0
             },
             {
-              "entity_name": "[unused_variable] Included header thread is not used directly (fixes available)",
+              "entity_name": "[unused_variable] Included header string_view is not used directly (fixes available)",
               "file_path": "include/cucascade/io/uring/uring_reactor.hpp",
-              "line_start": 45,
-              "line_end": 45,
+              "line_start": 46,
+              "line_end": 46,
               "metric_value": 0.0
             },
             {
               "entity_name": "[unused_variable] Included header vector is not used directly (fixes available)",
               "file_path": "include/cucascade/io/uring/uring_reactor.hpp",
-              "line_start": 46,
-              "line_end": 46,
+              "line_start": 48,
+              "line_end": 48,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header concepts is not used directly (fixes available)",
+              "file_path": "include/cucascade/log/logging.hpp",
+              "line_start": 53,
+              "line_end": 53,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header format is not used directly (fixes available)",
+              "file_path": "include/cucascade/log/logging.hpp",
+              "line_start": 55,
+              "line_end": 55,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header source_location is not used directly (fixes available)",
+              "file_path": "include/cucascade/log/logging.hpp",
+              "line_start": 58,
+              "line_end": 58,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header utility is not used directly (fixes available)",
+              "file_path": "include/cucascade/log/logging.hpp",
+              "line_start": 60,
+              "line_end": 60,
               "metric_value": 0.0
             },
             {
@@ -972,8 +916,8 @@
             {
               "entity_name": "[unused_variable] Included header set is not used directly (fix available)",
               "file_path": "include/cucascade/memory/detail/reservation_aware_resource_adaptor_impl.hpp",
-              "line_start": 36,
-              "line_end": 36,
+              "line_start": 37,
+              "line_end": 37,
               "metric_value": 0.0
             },
             {
@@ -1019,13 +963,6 @@
               "metric_value": 0.0
             },
             {
-              "entity_name": "[unused_variable] Included header unordered_map is not used directly (fixes available)",
-              "file_path": "include/cucascade/memory/fixed_size_host_memory_resource.hpp",
-              "line_start": 40,
-              "line_end": 40,
-              "metric_value": 0.0
-            },
-            {
               "entity_name": "[unused_variable] Included header unordered_set is not used directly (fixes available)",
               "file_path": "include/cucascade/memory/fixed_size_host_memory_resource.hpp",
               "line_start": 41,
@@ -1051,13 +988,6 @@
               "file_path": "include/cucascade/memory/memory_reservation_manager.hpp",
               "line_start": 28,
               "line_end": 28,
-              "metric_value": 0.0
-            },
-            {
-              "entity_name": "[unused_variable] Included header memory is not used directly (fixes available)",
-              "file_path": "include/cucascade/memory/memory_reservation_manager.hpp",
-              "line_start": 29,
-              "line_end": 29,
               "metric_value": 0.0
             },
             {
@@ -1189,22 +1119,43 @@
             {
               "entity_name": "[unused_variable] Included header concepts is not used directly (fixes available)",
               "file_path": "include/cucascade/utils/atomics.hpp",
-              "line_start": 21,
-              "line_end": 21,
-              "metric_value": 0.0
-            },
-            {
-              "entity_name": "[unused_variable] Included header cstdint is not used directly (fixes available)",
-              "file_path": "include/cucascade/utils/atomics.hpp",
               "line_start": 22,
               "line_end": 22,
               "metric_value": 0.0
             },
             {
-              "entity_name": "[unused_variable] Included header utility is not used directly (fixes available)",
+              "entity_name": "[unused_variable] Included header cstdint is not used directly (fixes available)",
               "file_path": "include/cucascade/utils/atomics.hpp",
               "line_start": 23,
               "line_end": 23,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header utility is not used directly (fixes available)",
+              "file_path": "include/cucascade/utils/atomics.hpp",
+              "line_start": 24,
+              "line_end": 24,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header utility is not used directly (fix available)",
+              "file_path": "include/cucascade/utils/cleanup_utils.hpp",
+              "line_start": 9,
+              "line_end": 9,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header format is not used directly (fixes available)",
+              "file_path": "include/cucascade/utils/error_utils.hpp",
+              "line_start": 23,
+              "line_end": 23,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header source_location is not used directly (fixes available)",
+              "file_path": "include/cucascade/utils/error_utils.hpp",
+              "line_start": 24,
+              "line_end": 24,
               "metric_value": 0.0
             },
             {
@@ -1257,31 +1208,24 @@
               "metric_value": 0.0
             },
             {
-              "entity_name": "[unused_variable] Included header vector is not used directly (fix available)",
-              "file_path": "src/cudf/datasource.cpp",
-              "line_start": 34,
-              "line_end": 34,
-              "metric_value": 0.0
-            },
-            {
               "entity_name": "[unused_variable] Included header memory is not used directly (fixes available)",
               "file_path": "src/cudf/gpu_data_representation.cpp",
-              "line_start": 30,
-              "line_end": 30,
+              "line_start": 31,
+              "line_end": 31,
               "metric_value": 0.0
             },
             {
               "entity_name": "[unused_variable] Included header type_traits is not used directly (fixes available)",
               "file_path": "src/cudf/gpu_data_representation.cpp",
-              "line_start": 32,
-              "line_end": 32,
+              "line_start": 33,
+              "line_end": 33,
               "metric_value": 0.0
             },
             {
               "entity_name": "[unused_variable] Included header utility is not used directly (fixes available)",
               "file_path": "src/cudf/gpu_data_representation.cpp",
-              "line_start": 33,
-              "line_end": 33,
+              "line_start": 34,
+              "line_end": 34,
               "metric_value": 0.0
             },
             {
@@ -1328,13 +1272,6 @@
             },
             {
               "entity_name": "[unused_variable] Included header unordered_map is not used directly (fixes available)",
-              "file_path": "src/cudf/representation_converter_builtins.cpp",
-              "line_start": 69,
-              "line_end": 69,
-              "metric_value": 0.0
-            },
-            {
-              "entity_name": "[unused_variable] Included header vector is not used directly (fixes available)",
               "file_path": "src/cudf/representation_converter_builtins.cpp",
               "line_start": 70,
               "line_end": 70,
@@ -1418,13 +1355,6 @@
               "metric_value": 0.0
             },
             {
-              "entity_name": "[unused_variable] Included header vector is not used directly (fixes available)",
-              "file_path": "src/data/pipeline_io_backend.cpp",
-              "line_start": 44,
-              "line_end": 44,
-              "metric_value": 0.0
-            },
-            {
               "entity_name": "[unused_variable] Included header memory is not used directly (fixes available)",
               "file_path": "src/data/representation_converter.cpp",
               "line_start": 20,
@@ -1476,50 +1406,50 @@
             {
               "entity_name": "[unused_variable] Included header cctype is not used directly (fixes available)",
               "file_path": "src/io/datasource_factory.cpp",
+              "line_start": 32,
+              "line_end": 32,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header exception is not used directly (fixes available)",
+              "file_path": "src/io/datasource_factory.cpp",
+              "line_start": 33,
+              "line_end": 33,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header memory is not used directly (fixes available)",
+              "file_path": "src/io/datasource_factory.cpp",
+              "line_start": 34,
+              "line_end": 34,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header mutex is not used directly (fixes available)",
+              "file_path": "src/io/datasource_factory.cpp",
               "line_start": 35,
               "line_end": 35,
               "metric_value": 0.0
             },
             {
-              "entity_name": "[unused_variable] Included header exception is not used directly (fixes available)",
+              "entity_name": "[unused_variable] Included header optional is not used directly (fixes available)",
               "file_path": "src/io/datasource_factory.cpp",
               "line_start": 36,
               "line_end": 36,
               "metric_value": 0.0
             },
             {
-              "entity_name": "[unused_variable] Included header memory is not used directly (fixes available)",
+              "entity_name": "[unused_variable] Included header stdexcept is not used directly (fixes available)",
               "file_path": "src/io/datasource_factory.cpp",
               "line_start": 37,
               "line_end": 37,
               "metric_value": 0.0
             },
             {
-              "entity_name": "[unused_variable] Included header mutex is not used directly (fixes available)",
+              "entity_name": "[unused_variable] Included header utility is not used directly (fixes available)",
               "file_path": "src/io/datasource_factory.cpp",
               "line_start": 38,
               "line_end": 38,
-              "metric_value": 0.0
-            },
-            {
-              "entity_name": "[unused_variable] Included header optional is not used directly (fixes available)",
-              "file_path": "src/io/datasource_factory.cpp",
-              "line_start": 39,
-              "line_end": 39,
-              "metric_value": 0.0
-            },
-            {
-              "entity_name": "[unused_variable] Included header stdexcept is not used directly (fixes available)",
-              "file_path": "src/io/datasource_factory.cpp",
-              "line_start": 40,
-              "line_end": 40,
-              "metric_value": 0.0
-            },
-            {
-              "entity_name": "[unused_variable] Included header utility is not used directly (fixes available)",
-              "file_path": "src/io/datasource_factory.cpp",
-              "line_start": 41,
-              "line_end": 41,
               "metric_value": 0.0
             },
             {
@@ -1572,38 +1502,304 @@
               "metric_value": 0.0
             },
             {
+              "entity_name": "[unused_variable] Included header string is not used directly (fix available)",
+              "file_path": "src/io/rest/config.cpp",
+              "line_start": 22,
+              "line_end": 22,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header memory is not used directly (fix available)",
+              "file_path": "src/io/rest/errc.hpp",
+              "line_start": 21,
+              "line_end": 21,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header algorithm is not used directly (fixes available)",
+              "file_path": "src/io/rest/http/chunked_decoder.cpp",
+              "line_start": 37,
+              "line_end": 37,
+              "metric_value": 0.0
+            },
+            {
               "entity_name": "[unused_variable] Included header cstdint is not used directly (fixes available)",
-              "file_path": "src/io/kvikio/kvikio_context.cpp",
+              "file_path": "src/io/rest/http/chunked_decoder.cpp",
+              "line_start": 39,
+              "line_end": 39,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header span is not used directly (fix available)",
+              "file_path": "src/io/rest/http/chunked_decoder.hpp",
+              "line_start": 44,
+              "line_end": 44,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header string_view is not used directly (fix available)",
+              "file_path": "src/io/rest/http/classify.cpp",
+              "line_start": 25,
+              "line_end": 25,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header string_view is not used directly (fix available)",
+              "file_path": "src/io/rest/http/classify.hpp",
               "line_start": 30,
               "line_end": 30,
               "metric_value": 0.0
             },
             {
-              "entity_name": "[unused_variable] Included header exception is not used directly (fixes available)",
-              "file_path": "src/io/kvikio/kvikio_context.cpp",
+              "entity_name": "[unused_variable] Included header cstddef is not used directly (fixes available)",
+              "file_path": "src/io/rest/http/content_range.cpp",
+              "line_start": 24,
+              "line_end": 24,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header cstring is not used directly (fixes available)",
+              "file_path": "src/io/rest/http/content_range.cpp",
+              "line_start": 26,
+              "line_end": 26,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header string_view is not used directly (fix available)",
+              "file_path": "src/io/rest/http/content_range.hpp",
+              "line_start": 28,
+              "line_end": 28,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header bit is not used directly (fix available)",
+              "file_path": "src/io/rest/http/fields.hpp",
+              "line_start": 27,
+              "line_end": 27,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header algorithm is not used directly (fixes available)",
+              "file_path": "src/io/rest/http/iovec_sink.cpp",
+              "line_start": 23,
+              "line_end": 23,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header cstring is not used directly (fixes available)",
+              "file_path": "src/io/rest/http/iovec_sink.cpp",
+              "line_start": 24,
+              "line_end": 24,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header span is not used directly (fix available)",
+              "file_path": "src/io/rest/http/iovec_sink.hpp",
               "line_start": 31,
               "line_end": 31,
               "metric_value": 0.0
             },
             {
-              "entity_name": "[unused_variable] Included header memory is not used directly (fixes available)",
-              "file_path": "src/io/kvikio/kvikio_context.cpp",
+              "entity_name": "[unused_variable] Included header algorithm is not used directly (fix available)",
+              "file_path": "src/io/rest/http/request_head.cpp",
+              "line_start": 23,
+              "line_end": 23,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header array is not used directly (fixes available)",
+              "file_path": "src/io/rest/http/request_head.hpp",
+              "line_start": 28,
+              "line_end": 28,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header span is not used directly (fixes available)",
+              "file_path": "src/io/rest/http/request_head.hpp",
+              "line_start": 31,
+              "line_end": 31,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header string_view is not used directly (fixes available)",
+              "file_path": "src/io/rest/http/request_head.hpp",
               "line_start": 32,
               "line_end": 32,
               "metric_value": 0.0
             },
             {
+              "entity_name": "[unused_variable] Included header algorithm is not used directly (fix available)",
+              "file_path": "src/io/rest/http/response_parser.cpp",
+              "line_start": 40,
+              "line_end": 40,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header span is not used directly (fixes available)",
+              "file_path": "src/io/rest/http/response_parser.hpp",
+              "line_start": 45,
+              "line_end": 45,
+              "metric_value": 0.0
+            },
+            {
               "entity_name": "[unused_variable] Included header string_view is not used directly (fixes available)",
-              "file_path": "src/io/kvikio/kvikio_context.cpp",
+              "file_path": "src/io/rest/http/response_parser.hpp",
+              "line_start": 46,
+              "line_end": 46,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header string_view is not used directly (fix available)",
+              "file_path": "src/io/rest/http/rules.hpp",
+              "line_start": 52,
+              "line_end": 52,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header span is not used directly (fix available)",
+              "file_path": "src/io/rest/net/cipher_ring.hpp",
+              "line_start": 56,
+              "line_end": 56,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header cstdio is not used directly (fixes available)",
+              "file_path": "src/io/rest/net/common.hpp",
+              "line_start": 24,
+              "line_end": 24,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header cstdlib is not used directly (fixes available)",
+              "file_path": "src/io/rest/net/common.hpp",
+              "line_start": 25,
+              "line_end": 25,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header algorithm is not used directly (fixes available)",
+              "file_path": "src/io/rest/net/dns_resolver.cpp",
+              "line_start": 28,
+              "line_end": 28,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header system_error is not used directly (fixes available)",
+              "file_path": "src/io/rest/net/dns_resolver.cpp",
+              "line_start": 32,
+              "line_end": 32,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header span is not used directly (fix available)",
+              "file_path": "src/io/rest/net/dns_resolver.hpp",
+              "line_start": 55,
+              "line_end": 55,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header span is not used directly (fix available)",
+              "file_path": "src/io/rest/net/streams.hpp",
               "line_start": 36,
               "line_end": 36,
               "metric_value": 0.0
             },
             {
-              "entity_name": "[unused_variable] Included header utility is not used directly (fixes available)",
-              "file_path": "src/io/kvikio/kvikio_context.cpp",
+              "entity_name": "[unused_variable] Included header algorithm is not used directly (fixes available)",
+              "file_path": "src/io/rest/net/tls_stream.cpp",
+              "line_start": 33,
+              "line_end": 33,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header cstring is not used directly (fixes available)",
+              "file_path": "src/io/rest/net/tls_stream.cpp",
               "line_start": 37,
               "line_end": 37,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header new is not used directly (fixes available)",
+              "file_path": "src/io/rest/net/tls_stream.cpp",
+              "line_start": 38,
+              "line_end": 38,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header string_view is not used directly (fixes available)",
+              "file_path": "src/io/rest/net/tls_stream.cpp",
+              "line_start": 39,
+              "line_end": 39,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header utility is not used directly (fixes available)",
+              "file_path": "src/io/rest/net/tls_stream.cpp",
+              "line_start": 40,
+              "line_end": 40,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header memory is not used directly (fixes available)",
+              "file_path": "src/io/rest/net/tls_stream.hpp",
+              "line_start": 35,
+              "line_end": 35,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header span is not used directly (fixes available)",
+              "file_path": "src/io/rest/net/tls_stream.hpp",
+              "line_start": 36,
+              "line_end": 36,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header string_view is not used directly (fixes available)",
+              "file_path": "src/io/rest/net/tls_stream.hpp",
+              "line_start": 37,
+              "line_end": 37,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header algorithm is not used directly (fixes available)",
+              "file_path": "src/io/rest/net/uring_transport.cpp",
+              "line_start": 41,
+              "line_end": 41,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header array is not used directly (fixes available)",
+              "file_path": "src/io/rest/net/uring_transport.cpp",
+              "line_start": 42,
+              "line_end": 42,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header limits is not used directly (fixes available)",
+              "file_path": "src/io/rest/net/uring_transport.cpp",
+              "line_start": 49,
+              "line_end": 49,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header functional is not used directly (fixes available)",
+              "file_path": "src/io/rest/net/uring_transport.hpp",
+              "line_start": 46,
+              "line_end": 46,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header span is not used directly (fixes available)",
+              "file_path": "src/io/rest/net/uring_transport.hpp",
+              "line_start": 49,
+              "line_end": 49,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header string_view is not used directly (fixes available)",
+              "file_path": "src/io/rest/net/uring_transport.hpp",
+              "line_start": 52,
+              "line_end": 52,
               "metric_value": 0.0
             },
             {
@@ -1621,150 +1817,129 @@
               "metric_value": 0.0
             },
             {
-              "entity_name": "[unused_variable] Included header algorithm is not used directly (fixes available)",
-              "file_path": "src/io/rest/rest_ioctx.cpp",
-              "line_start": 22,
-              "line_end": 22,
-              "metric_value": 0.0
-            },
-            {
               "entity_name": "[unused_variable] Included header cstdint is not used directly (fixes available)",
-              "file_path": "src/io/rest/rest_ioctx.cpp",
-              "line_start": 25,
-              "line_end": 25,
+              "file_path": "src/io/rest/reactor_placement.cpp",
+              "line_start": 29,
+              "line_end": 29,
               "metric_value": 0.0
             },
             {
               "entity_name": "[unused_variable] Included header exception is not used directly (fixes available)",
-              "file_path": "src/io/rest/rest_ioctx.cpp",
-              "line_start": 26,
-              "line_end": 26,
-              "metric_value": 0.0
-            },
-            {
-              "entity_name": "[unused_variable] Included header format is not used directly (fixes available)",
-              "file_path": "src/io/rest/rest_ioctx.cpp",
-              "line_start": 27,
-              "line_end": 27,
-              "metric_value": 0.0
-            },
-            {
-              "entity_name": "[unused_variable] Included header memory is not used directly (fixes available)",
-              "file_path": "src/io/rest/rest_ioctx.cpp",
-              "line_start": 28,
-              "line_end": 28,
+              "file_path": "src/io/rest/reactor_placement.cpp",
+              "line_start": 30,
+              "line_end": 30,
               "metric_value": 0.0
             },
             {
               "entity_name": "[unused_variable] Included header span is not used directly (fixes available)",
+              "file_path": "src/io/rest/reactor_placement.cpp",
+              "line_start": 32,
+              "line_end": 32,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header string_view is not used directly (fixes available)",
+              "file_path": "src/io/rest/reactor_placement.cpp",
+              "line_start": 34,
+              "line_end": 34,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header optional is not used directly (fix available)",
+              "file_path": "src/io/rest/reactor_placement.hpp",
+              "line_start": 23,
+              "line_end": 23,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header cstdint is not used directly (fixes available)",
               "file_path": "src/io/rest/rest_ioctx.cpp",
               "line_start": 30,
               "line_end": 30,
               "metric_value": 0.0
             },
             {
-              "entity_name": "[unused_variable] Included header stdexcept is not used directly (fixes available)",
+              "entity_name": "[unused_variable] Included header exception is not used directly (fixes available)",
               "file_path": "src/io/rest/rest_ioctx.cpp",
               "line_start": 31,
               "line_end": 31,
               "metric_value": 0.0
             },
             {
-              "entity_name": "[unused_variable] Included header string_view is not used directly (fixes available)",
+              "entity_name": "[unused_variable] Included header format is not used directly (fixes available)",
+              "file_path": "src/io/rest/rest_ioctx.cpp",
+              "line_start": 32,
+              "line_end": 32,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header memory is not used directly (fixes available)",
               "file_path": "src/io/rest/rest_ioctx.cpp",
               "line_start": 33,
               "line_end": 33,
               "metric_value": 0.0
             },
             {
+              "entity_name": "[unused_variable] Included header span is not used directly (fixes available)",
+              "file_path": "src/io/rest/rest_ioctx.cpp",
+              "line_start": 35,
+              "line_end": 35,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header string_view is not used directly (fixes available)",
+              "file_path": "src/io/rest/rest_ioctx.cpp",
+              "line_start": 38,
+              "line_end": 38,
+              "metric_value": 0.0
+            },
+            {
               "entity_name": "[unused_variable] Included header system_error is not used directly (fixes available)",
               "file_path": "src/io/rest/rest_ioctx.cpp",
-              "line_start": 34,
-              "line_end": 34,
+              "line_start": 39,
+              "line_end": 39,
               "metric_value": 0.0
             },
             {
-              "entity_name": "[unused_variable] Included header utility is not used directly (fixes available)",
-              "file_path": "src/io/rest/rest_ioctx.cpp",
-              "line_start": 35,
-              "line_end": 35,
-              "metric_value": 0.0
-            },
-            {
-              "entity_name": "[unused_variable] Included header vector is not used directly (fixes available)",
-              "file_path": "src/io/rest/rest_ioctx.cpp",
-              "line_start": 36,
-              "line_end": 36,
-              "metric_value": 0.0
-            },
-            {
-              "entity_name": "[unused_variable] Included header array is not used directly (fixes available)",
+              "entity_name": "[unused_variable] Included header signal.h is not used directly (fixes available)",
               "file_path": "src/io/rest/rest_reactor.cpp",
-              "line_start": 34,
-              "line_end": 34,
-              "metric_value": 0.0
-            },
-            {
-              "entity_name": "[unused_variable] Included header atomic is not used directly (fixes available)",
-              "file_path": "src/io/rest/rest_reactor.cpp",
-              "line_start": 35,
-              "line_end": 35,
-              "metric_value": 0.0
-            },
-            {
-              "entity_name": "[unused_variable] Included header deque is not used directly (fixes available)",
-              "file_path": "src/io/rest/rest_reactor.cpp",
-              "line_start": 42,
-              "line_end": 42,
-              "metric_value": 0.0
-            },
-            {
-              "entity_name": "[unused_variable] Included header format is not used directly (fixes available)",
-              "file_path": "src/io/rest/rest_reactor.cpp",
-              "line_start": 43,
-              "line_end": 43,
+              "line_start": 47,
+              "line_end": 47,
               "metric_value": 0.0
             },
             {
               "entity_name": "[unused_variable] Included header limits is not used directly (fixes available)",
               "file_path": "src/io/rest/rest_reactor.cpp",
-              "line_start": 44,
-              "line_end": 44,
+              "line_start": 64,
+              "line_end": 64,
               "metric_value": 0.0
             },
             {
-              "entity_name": "[unused_variable] Included header queue is not used directly (fixes available)",
+              "entity_name": "[unused_variable] Included header new is not used directly (fixes available)",
               "file_path": "src/io/rest/rest_reactor.cpp",
-              "line_start": 46,
-              "line_end": 46,
-              "metric_value": 0.0
-            },
-            {
-              "entity_name": "[unused_variable] Included header system_error is not used directly (fixes available)",
-              "file_path": "src/io/rest/rest_reactor.cpp",
-              "line_start": 50,
-              "line_end": 50,
+              "line_start": 65,
+              "line_end": 65,
               "metric_value": 0.0
             },
             {
               "entity_name": "[unused_variable] Included header thread is not used directly (fixes available)",
               "file_path": "src/io/rest/rest_reactor.cpp",
-              "line_start": 51,
-              "line_end": 51,
+              "line_start": 71,
+              "line_end": 71,
               "metric_value": 0.0
             },
             {
               "entity_name": "[unused_variable] Included header unordered_map is not used directly (fixes available)",
               "file_path": "src/io/rest/rest_reactor.cpp",
-              "line_start": 52,
-              "line_end": 52,
+              "line_start": 73,
+              "line_end": 73,
               "metric_value": 0.0
             },
             {
-              "entity_name": "[unused_variable] Included header vector is not used directly (fixes available)",
+              "entity_name": "[unused_variable] Included header variant is not used directly (fixes available)",
               "file_path": "src/io/rest/rest_reactor.cpp",
-              "line_start": 53,
-              "line_end": 53,
+              "line_start": 75,
+              "line_end": 75,
               "metric_value": 0.0
             },
             {
@@ -1796,10 +1971,206 @@
               "metric_value": 0.0
             },
             {
-              "entity_name": "[unused_variable] Included header stdexcept is not used directly (fix available)",
+              "entity_name": "[unused_variable] Included header stdexcept is not used directly (fixes available)",
               "file_path": "src/io/rest/s3/sigv4_authorizer.cpp",
               "line_start": 26,
               "line_end": 26,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header string_view is not used directly (fixes available)",
+              "file_path": "src/io/rest/s3/sigv4_authorizer.cpp",
+              "line_start": 28,
+              "line_end": 28,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header utility is not used directly (fix available)",
+              "file_path": "src/io/rest/shared_services.cpp",
+              "line_start": 24,
+              "line_end": 24,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header functional is not used directly (fixes available)",
+              "file_path": "src/io/rest/shared_services.hpp",
+              "line_start": 27,
+              "line_end": 27,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header memory is not used directly (fixes available)",
+              "file_path": "src/io/rest/shared_services.hpp",
+              "line_start": 28,
+              "line_end": 28,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header optional is not used directly (fixes available)",
+              "file_path": "src/io/rest/shared_services.hpp",
+              "line_start": 30,
+              "line_end": 30,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header string_view is not used directly (fixes available)",
+              "file_path": "src/io/rest/shared_services.hpp",
+              "line_start": 31,
+              "line_end": 31,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header algorithm is not used directly (fixes available)",
+              "file_path": "src/io/tls/evp_aead.cpp",
+              "line_start": 28,
+              "line_end": 28,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header array is not used directly (fixes available)",
+              "file_path": "src/io/tls/evp_aead.cpp",
+              "line_start": 29,
+              "line_end": 29,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header new is not used directly (fixes available)",
+              "file_path": "src/io/tls/evp_aead.cpp",
+              "line_start": 31,
+              "line_end": 31,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header cstdint is not used directly (fixes available)",
+              "file_path": "src/io/tls/evp_aead.hpp",
+              "line_start": 24,
+              "line_end": 24,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header memory is not used directly (fixes available)",
+              "file_path": "src/io/tls/evp_aead.hpp",
+              "line_start": 25,
+              "line_end": 25,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header span is not used directly (fixes available)",
+              "file_path": "src/io/tls/evp_aead.hpp",
+              "line_start": 26,
+              "line_end": 26,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header array is not used directly (fix available)",
+              "file_path": "src/io/tls/key_schedule.cpp",
+              "line_start": 33,
+              "line_end": 33,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header array is not used directly (fixes available)",
+              "file_path": "src/io/tls/key_schedule.hpp",
+              "line_start": 23,
+              "line_end": 23,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header span is not used directly (fixes available)",
+              "file_path": "src/io/tls/key_schedule.hpp",
+              "line_start": 26,
+              "line_end": 26,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header string_view is not used directly (fixes available)",
+              "file_path": "src/io/tls/key_schedule.hpp",
+              "line_start": 27,
+              "line_end": 27,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header cstddef is not used directly (fixes available)",
+              "file_path": "src/io/tls/ktls.hpp",
+              "line_start": 23,
+              "line_end": 23,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header span is not used directly (fixes available)",
+              "file_path": "src/io/tls/ktls.hpp",
+              "line_start": 26,
+              "line_end": 26,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header span is not used directly (fixes available)",
+              "file_path": "src/io/tls/openssl_context.cpp",
+              "line_start": 45,
+              "line_end": 45,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header stdexcept is not used directly (fixes available)",
+              "file_path": "src/io/tls/openssl_context.cpp",
+              "line_start": 46,
+              "line_end": 46,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header utility is not used directly (fixes available)",
+              "file_path": "src/io/tls/openssl_context.cpp",
+              "line_start": 48,
+              "line_end": 48,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header string_view is not used directly (fix available)",
+              "file_path": "src/io/tls/openssl_internal.hpp",
+              "line_start": 38,
+              "line_end": 38,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header new is not used directly (fixes available)",
+              "file_path": "src/io/tls/openssl_session.cpp",
+              "line_start": 69,
+              "line_end": 69,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header utility is not used directly (fixes available)",
+              "file_path": "src/io/tls/openssl_session.cpp",
+              "line_start": 70,
+              "line_end": 70,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header algorithm is not used directly (fix available)",
+              "file_path": "src/io/tls/openssl_session_cache.cpp",
+              "line_start": 28,
+              "line_end": 28,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header new is not used directly (fix available)",
+              "file_path": "src/io/tls/record_opener.cpp",
+              "line_start": 36,
+              "line_end": 36,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header memory is not used directly (fixes available)",
+              "file_path": "src/io/tls/record_opener.hpp",
+              "line_start": 30,
+              "line_end": 30,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header span is not used directly (fixes available)",
+              "file_path": "src/io/tls/record_opener.hpp",
+              "line_start": 31,
+              "line_end": 31,
               "metric_value": 0.0
             },
             {
@@ -1810,78 +2181,106 @@
               "metric_value": 0.0
             },
             {
-              "entity_name": "[unused_variable] Included header memory is not used directly (fix available)",
+              "entity_name": "[unused_variable] Included header memory is not used directly (fixes available)",
               "file_path": "src/io/uring/uring_ioctx.cpp",
               "line_start": 22,
               "line_end": 22,
               "metric_value": 0.0
             },
             {
+              "entity_name": "[unused_variable] Included header string is not used directly (fixes available)",
+              "file_path": "src/io/uring/uring_ioctx.cpp",
+              "line_start": 23,
+              "line_end": 23,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header vector is not used directly (fixes available)",
+              "file_path": "src/io/uring/uring_ioctx.cpp",
+              "line_start": 24,
+              "line_end": 24,
+              "metric_value": 0.0
+            },
+            {
               "entity_name": "[unused_variable] Included header array is not used directly (fixes available)",
               "file_path": "src/io/uring/uring_reactor.cpp",
-              "line_start": 37,
-              "line_end": 37,
+              "line_start": 42,
+              "line_end": 42,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header bit is not used directly (fixes available)",
+              "file_path": "src/io/uring/uring_reactor.cpp",
+              "line_start": 43,
+              "line_end": 43,
               "metric_value": 0.0
             },
             {
               "entity_name": "[unused_variable] Included header filesystem is not used directly (fixes available)",
-              "file_path": "src/io/uring/uring_reactor.cpp",
-              "line_start": 44,
-              "line_end": 44,
-              "metric_value": 0.0
-            },
-            {
-              "entity_name": "[unused_variable] Included header memory is not used directly (fixes available)",
-              "file_path": "src/io/uring/uring_reactor.cpp",
-              "line_start": 46,
-              "line_end": 46,
-              "metric_value": 0.0
-            },
-            {
-              "entity_name": "[unused_variable] Included header optional is not used directly (fixes available)",
-              "file_path": "src/io/uring/uring_reactor.cpp",
-              "line_start": 47,
-              "line_end": 47,
-              "metric_value": 0.0
-            },
-            {
-              "entity_name": "[unused_variable] Included header span is not used directly (fixes available)",
-              "file_path": "src/io/uring/uring_reactor.cpp",
-              "line_start": 48,
-              "line_end": 48,
-              "metric_value": 0.0
-            },
-            {
-              "entity_name": "[unused_variable] Included header string is not used directly (fixes available)",
               "file_path": "src/io/uring/uring_reactor.cpp",
               "line_start": 50,
               "line_end": 50,
               "metric_value": 0.0
             },
             {
-              "entity_name": "[unused_variable] Included header thread is not used directly (fixes available)",
+              "entity_name": "[unused_variable] Included header memory is not used directly (fixes available)",
               "file_path": "src/io/uring/uring_reactor.cpp",
               "line_start": 52,
               "line_end": 52,
               "metric_value": 0.0
             },
             {
-              "entity_name": "[unused_variable] Included header tuple is not used directly (fixes available)",
+              "entity_name": "[unused_variable] Included header optional is not used directly (fixes available)",
               "file_path": "src/io/uring/uring_reactor.cpp",
               "line_start": 53,
               "line_end": 53,
               "metric_value": 0.0
             },
             {
-              "entity_name": "[unused_variable] Included header vector is not used directly (fixes available)",
+              "entity_name": "[unused_variable] Included header span is not used directly (fixes available)",
               "file_path": "src/io/uring/uring_reactor.cpp",
-              "line_start": 55,
-              "line_end": 55,
+              "line_start": 54,
+              "line_end": 54,
               "metric_value": 0.0
             },
             {
-              "entity_name": "[unused_variable] Included header initializer_list is not used directly (fixes available)",
-              "file_path": "src/memory/common.cpp",
+              "entity_name": "[unused_variable] Included header string is not used directly (fixes available)",
+              "file_path": "src/io/uring/uring_reactor.cpp",
+              "line_start": 56,
+              "line_end": 56,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header thread is not used directly (fixes available)",
+              "file_path": "src/io/uring/uring_reactor.cpp",
+              "line_start": 58,
+              "line_end": 58,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header tuple is not used directly (fixes available)",
+              "file_path": "src/io/uring/uring_reactor.cpp",
+              "line_start": 59,
+              "line_end": 59,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header format is not used directly (fixes available)",
+              "file_path": "src/log/logging.cpp",
+              "line_start": 28,
+              "line_end": 28,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header string is not used directly (fixes available)",
+              "file_path": "src/log/logging.cpp",
+              "line_start": 31,
+              "line_end": 31,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header string_view is not used directly (fixes available)",
+              "file_path": "src/log/logging.cpp",
               "line_start": 32,
               "line_end": 32,
               "metric_value": 0.0
@@ -1889,43 +2288,78 @@
             {
               "entity_name": "[unused_variable] Included header span is not used directly (fixes available)",
               "file_path": "src/memory/common.cpp",
-              "line_start": 34,
-              "line_end": 34,
-              "metric_value": 0.0
-            },
-            {
-              "entity_name": "[unused_variable] Included header unordered_map is not used directly (fixes available)",
-              "file_path": "src/memory/common.cpp",
               "line_start": 35,
               "line_end": 35,
               "metric_value": 0.0
             },
             {
-              "entity_name": "[unused_variable] Included header vector is not used directly (fixes available)",
+              "entity_name": "[unused_variable] Included header unordered_map is not used directly (fixes available)",
               "file_path": "src/memory/common.cpp",
-              "line_start": 37,
-              "line_end": 37,
+              "line_start": 36,
+              "line_end": 36,
               "metric_value": 0.0
             },
             {
-              "entity_name": "[unused_variable] Included header memory is not used directly (fixes available)",
+              "entity_name": "[unused_variable] Included header vector is not used directly (fixes available)",
+              "file_path": "src/memory/common.cpp",
+              "line_start": 38,
+              "line_end": 38,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header algorithm is not used directly (fixes available)",
               "file_path": "src/memory/fixed_size_host_memory_resource.cpp",
               "line_start": 28,
               "line_end": 28,
               "metric_value": 0.0
             },
             {
-              "entity_name": "[unused_variable] Included header mutex is not used directly (fixes available)",
+              "entity_name": "[unused_variable] Included header atomic is not used directly (fixes available)",
               "file_path": "src/memory/fixed_size_host_memory_resource.cpp",
               "line_start": 29,
               "line_end": 29,
               "metric_value": 0.0
             },
             {
+              "entity_name": "[unused_variable] Included header exception is not used directly (fixes available)",
+              "file_path": "src/memory/fixed_size_host_memory_resource.cpp",
+              "line_start": 31,
+              "line_end": 31,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header memory is not used directly (fixes available)",
+              "file_path": "src/memory/fixed_size_host_memory_resource.cpp",
+              "line_start": 32,
+              "line_end": 32,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header mutex is not used directly (fixes available)",
+              "file_path": "src/memory/fixed_size_host_memory_resource.cpp",
+              "line_start": 33,
+              "line_end": 33,
+              "metric_value": 0.0
+            },
+            {
               "entity_name": "[unused_variable] Included header stdexcept is not used directly (fixes available)",
               "file_path": "src/memory/fixed_size_host_memory_resource.cpp",
-              "line_start": 30,
-              "line_end": 30,
+              "line_start": 34,
+              "line_end": 34,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header thread is not used directly (fixes available)",
+              "file_path": "src/memory/fixed_size_host_memory_resource.cpp",
+              "line_start": 35,
+              "line_end": 35,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header vector is not used directly (fixes available)",
+              "file_path": "src/memory/fixed_size_host_memory_resource.cpp",
+              "line_start": 36,
+              "line_end": 36,
               "metric_value": 0.0
             },
             {
@@ -2006,10 +2440,24 @@
               "metric_value": 0.0
             },
             {
-              "entity_name": "[unused_variable] Included header cstring is not used directly (fix available)",
+              "entity_name": "[unused_variable] Included header array is not used directly (fixes available)",
+              "file_path": "src/memory/net_topology.cpp",
+              "line_start": 21,
+              "line_end": 21,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header sstream is not used directly (fixes available)",
+              "file_path": "src/memory/net_topology.cpp",
+              "line_start": 28,
+              "line_end": 28,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header climits is not used directly (fix available)",
               "file_path": "src/memory/numa_region_pinned_host_allocator.cpp",
-              "line_start": 23,
-              "line_end": 23,
+              "line_start": 31,
+              "line_end": 31,
               "metric_value": 0.0
             },
             {
@@ -2020,94 +2468,101 @@
               "metric_value": 0.0
             },
             {
-              "entity_name": "[unused_variable] Included header atomic is not used directly (fixes available)",
+              "entity_name": "[unused_variable] Included header algorithm is not used directly (fixes available)",
               "file_path": "src/memory/reservation_aware_resource_adaptor.cpp",
               "line_start": 33,
               "line_end": 33,
               "metric_value": 0.0
             },
             {
-              "entity_name": "[unused_variable] Included header exception is not used directly (fixes available)",
+              "entity_name": "[unused_variable] Included header atomic is not used directly (fixes available)",
               "file_path": "src/memory/reservation_aware_resource_adaptor.cpp",
               "line_start": 34,
               "line_end": 34,
               "metric_value": 0.0
             },
             {
-              "entity_name": "[unused_variable] Included header memory is not used directly (fixes available)",
+              "entity_name": "[unused_variable] Included header exception is not used directly (fixes available)",
               "file_path": "src/memory/reservation_aware_resource_adaptor.cpp",
               "line_start": 35,
               "line_end": 35,
               "metric_value": 0.0
             },
             {
-              "entity_name": "[unused_variable] Included header stdexcept is not used directly (fixes available)",
+              "entity_name": "[unused_variable] Included header memory is not used directly (fixes available)",
               "file_path": "src/memory/reservation_aware_resource_adaptor.cpp",
-              "line_start": 37,
-              "line_end": 37,
+              "line_start": 36,
+              "line_end": 36,
               "metric_value": 0.0
             },
             {
-              "entity_name": "[unused_variable] Included header string is not used directly (fixes available)",
+              "entity_name": "[unused_variable] Included header stdexcept is not used directly (fixes available)",
               "file_path": "src/memory/reservation_aware_resource_adaptor.cpp",
               "line_start": 38,
               "line_end": 38,
               "metric_value": 0.0
             },
             {
+              "entity_name": "[unused_variable] Included header string is not used directly (fixes available)",
+              "file_path": "src/memory/reservation_aware_resource_adaptor.cpp",
+              "line_start": 39,
+              "line_end": 39,
+              "metric_value": 0.0
+            },
+            {
               "entity_name": "[unused_variable] Included header algorithm is not used directly (fixes available)",
+              "file_path": "src/memory/reservation_manager_configurator.cpp",
+              "line_start": 25,
+              "line_end": 25,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header memory is not used directly (fixes available)",
+              "file_path": "src/memory/reservation_manager_configurator.cpp",
+              "line_start": 26,
+              "line_end": 26,
+              "metric_value": 0.0
+            },
+            {
+              "entity_name": "[unused_variable] Included header numeric is not used directly (fixes available)",
               "file_path": "src/memory/reservation_manager_configurator.cpp",
               "line_start": 27,
               "line_end": 27,
               "metric_value": 0.0
             },
             {
-              "entity_name": "[unused_variable] Included header memory is not used directly (fixes available)",
+              "entity_name": "[unused_variable] Included header set is not used directly (fixes available)",
               "file_path": "src/memory/reservation_manager_configurator.cpp",
               "line_start": 28,
               "line_end": 28,
               "metric_value": 0.0
             },
             {
-              "entity_name": "[unused_variable] Included header numeric is not used directly (fixes available)",
+              "entity_name": "[unused_variable] Included header stdexcept is not used directly (fixes available)",
               "file_path": "src/memory/reservation_manager_configurator.cpp",
               "line_start": 29,
               "line_end": 29,
               "metric_value": 0.0
             },
             {
-              "entity_name": "[unused_variable] Included header set is not used directly (fixes available)",
+              "entity_name": "[unused_variable] Included header unordered_map is not used directly (fixes available)",
               "file_path": "src/memory/reservation_manager_configurator.cpp",
               "line_start": 30,
               "line_end": 30,
               "metric_value": 0.0
             },
             {
-              "entity_name": "[unused_variable] Included header stdexcept is not used directly (fixes available)",
+              "entity_name": "[unused_variable] Included header variant is not used directly (fixes available)",
               "file_path": "src/memory/reservation_manager_configurator.cpp",
               "line_start": 31,
               "line_end": 31,
               "metric_value": 0.0
             },
             {
-              "entity_name": "[unused_variable] Included header unordered_map is not used directly (fixes available)",
+              "entity_name": "[unused_variable] Included header vector is not used directly (fixes available)",
               "file_path": "src/memory/reservation_manager_configurator.cpp",
               "line_start": 32,
               "line_end": 32,
-              "metric_value": 0.0
-            },
-            {
-              "entity_name": "[unused_variable] Included header variant is not used directly (fixes available)",
-              "file_path": "src/memory/reservation_manager_configurator.cpp",
-              "line_start": 33,
-              "line_end": 33,
-              "metric_value": 0.0
-            },
-            {
-              "entity_name": "[unused_variable] Included header vector is not used directly (fixes available)",
-              "file_path": "src/memory/reservation_manager_configurator.cpp",
-              "line_start": 34,
-              "line_end": 34,
               "metric_value": 0.0
             },
             {
@@ -2143,13 +2598,6 @@
               "file_path": "src/memory/stream_pool.cpp",
               "line_start": 24,
               "line_end": 24,
-              "metric_value": 0.0
-            },
-            {
-              "entity_name": "[unused_variable] Included header bit is not used directly (fixes available)",
-              "file_path": "src/memory/topology_discovery.cpp",
-              "line_start": 20,
-              "line_end": 20,
               "metric_value": 0.0
             },
             {
@@ -2224,45 +2672,21 @@
     },
     {
       "file_path": "include/cucascade/io/templated_ioctx.hpp",
-      "total_findings": 10,
-      "warning_findings": 10,
-      "composite_risk_score": 100.0
-    },
-    {
-      "file_path": "src/io/rest/rest_ioctx.cpp",
       "total_findings": 11,
       "warning_findings": 11,
       "composite_risk_score": 100.0
     },
     {
-      "file_path": "src/io/rest/rest_reactor.cpp",
-      "total_findings": 10,
-      "warning_findings": 10,
-      "composite_risk_score": 100.0
+      "file_path": "src/memory/fixed_size_host_memory_resource.cpp",
+      "total_findings": 8,
+      "warning_findings": 8,
+      "composite_risk_score": 90.0
     },
     {
       "file_path": "src/memory/reservation_manager_configurator.cpp",
       "total_findings": 8,
       "warning_findings": 8,
       "composite_risk_score": 90.0
-    },
-    {
-      "file_path": "include/cucascade/io/rest/rest_ioctx.hpp",
-      "total_findings": 7,
-      "warning_findings": 7,
-      "composite_risk_score": 85.0
-    },
-    {
-      "file_path": "include/cucascade/memory/memory_reservation_manager.hpp",
-      "total_findings": 7,
-      "warning_findings": 7,
-      "composite_risk_score": 85.0
-    },
-    {
-      "file_path": "src/cudf/representation_converter_builtins.cpp",
-      "total_findings": 7,
-      "warning_findings": 7,
-      "composite_risk_score": 85.0
     },
     {
       "file_path": "src/io/datasource_factory.cpp",
@@ -2277,7 +2701,25 @@
       "composite_risk_score": 85.0
     },
     {
-      "file_path": "include/cucascade/io/uring/uring_reactor.hpp",
+      "file_path": "src/io/rest/rest_ioctx.cpp",
+      "total_findings": 7,
+      "warning_findings": 7,
+      "composite_risk_score": 85.0
+    },
+    {
+      "file_path": "include/cucascade/memory/memory_reservation_manager.hpp",
+      "total_findings": 6,
+      "warning_findings": 6,
+      "composite_risk_score": 80.0
+    },
+    {
+      "file_path": "src/cudf/representation_converter_builtins.cpp",
+      "total_findings": 6,
+      "warning_findings": 6,
+      "composite_risk_score": 80.0
+    },
+    {
+      "file_path": "src/io/rest/rest_reactor.cpp",
       "total_findings": 6,
       "warning_findings": 6,
       "composite_risk_score": 80.0
@@ -2289,13 +2731,19 @@
       "composite_risk_score": 80.0
     },
     {
-      "file_path": "src/memory/common.cpp",
+      "file_path": "src/memory/reservation_aware_resource_adaptor.cpp",
+      "total_findings": 6,
+      "warning_findings": 6,
+      "composite_risk_score": 80.0
+    },
+    {
+      "file_path": "include/cucascade/io/rest/rest_ioctx.hpp",
       "total_findings": 5,
       "warning_findings": 5,
       "composite_risk_score": 75.0
     },
     {
-      "file_path": "include/cucascade/io/s3rdma/s3rdma_ioctx.hpp",
+      "file_path": "include/cucascade/io/rest/rest_reactor.hpp",
       "total_findings": 5,
       "warning_findings": 5,
       "composite_risk_score": 75.0
@@ -2313,7 +2761,7 @@
       "composite_risk_score": 75.0
     },
     {
-      "file_path": "src/io/kvikio/kvikio_context.cpp",
+      "file_path": "src/io/rest/net/tls_stream.cpp",
       "total_findings": 5,
       "warning_findings": 5,
       "composite_risk_score": 75.0
@@ -2325,13 +2773,13 @@
       "composite_risk_score": 75.0
     },
     {
-      "file_path": "src/memory/reservation_aware_resource_adaptor.cpp",
-      "total_findings": 5,
-      "warning_findings": 5,
-      "composite_risk_score": 75.0
+      "file_path": "src/io/tls/openssl_context.cpp",
+      "total_findings": 4,
+      "warning_findings": 4,
+      "composite_risk_score": 60.0
     },
     {
-      "file_path": "benchmark/benchmark_disk_converter.cpp",
+      "file_path": "include/cucascade/io/io_utils.hpp",
       "total_findings": 4,
       "warning_findings": 4,
       "composite_risk_score": 60.0
